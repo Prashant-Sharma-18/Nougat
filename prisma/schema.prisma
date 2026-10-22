@@ -1,0 +1,118 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TransactionType {
+  EARNED
+  REDEEMED
+  REFUNDED
+  ADJUSTED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String            @id @default(uuid())
+  email         String            @unique
+  name          String?
+  role          Role              @default(USER)
+  pointBalance  Int               @default(0)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  
+  transactions  PointLedger[]
+  orders        RedemptionOrder[]
+  notifications Notification[]
+
+  @@index([email])
+}
+
+model PointLedger {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int             // Positive for earnings, negative for redemptions
+  type        TransactionType
+  description String
+  referenceId String?         // Links to orderId or activityId
+  createdAt   DateTime        @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model BrandCatalogCache {
+  id              String   @id // Provider brand/product ID
+  name            String
+  category        String   @default("Retail")
+  currencyCode    String   @default("USD")
+  minRecipientVal Float
+  maxRecipientVal Float
+  logoUrl         String
+  description     String   @default("")
+  denominations   Float[]  // e.g. [10, 25, 50, 100]
+  pointsPerUnit   Float    @default(100.0) // 100 points = $1.00
+  isActive        Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+model RedemptionOrder {
+  id                String       @id @default(uuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandId           String
+  brandName         String
+  faceValue         Float
+  currency          String       @default("USD")
+  pointsSpent       Int
+  cashSpent         Float?       @default(0.0)
+  paymentMethod     String?      // e.g. "Credit Card (Visa •••• 4242)"
+  status            OrderStatus  @default(PENDING)
+  providerOrderId   String?      @unique
+  claimUrl          String?      // Provider link if delivered as URL
+  cardCodeEncrypted String?     // If delivered as raw voucher code
+  cardPinEncrypted  String?
+  recipientName     String?     // If gifted to a friend
+  recipientEmail    String?
+  giftMessage       String?
+  remainingCardBalance Float?   // For simulated POS merchant checkout
+  errorMessage      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // "ORDER", "STREAK", "TIER", "EARN", "REFUND"
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+

@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: nougat_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: giftcard_loyalty
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d giftcard_loyalty"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nougat_loyalty_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/giftcard_loyalty?schema=public
+      - TREMENDOUS_API_URL=https://testflight.tremendous.com/api/v2
+      - TREMENDOUS_API_KEY=${TREMENDOUS_API_KEY:-}
+      - ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-nougat_enterprise_loyalty_vault_key_2026_super_secret}
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+
