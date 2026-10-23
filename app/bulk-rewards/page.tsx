@@ -930,6 +930,14 @@ export default function BulkRewardsPage() {
                 </>
               )}
             </button>
+
+            <div className="pt-2 text-[11px] text-zinc-500 font-mono text-center flex items-center justify-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-zinc-600" />
+              <span>Policy &gt; $250 routed to</span>
+              <Link href="/admin" className="underline hover:text-zinc-950 font-medium">
+                Cost Center Approvals
+              </Link>
+            </div>
           </div>
         </div>
       </div>

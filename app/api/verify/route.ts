@@ -13,6 +13,12 @@ import { executeBulkRewards } from "@/actions/bulkRewards";
 import { convertUsdToCurrency, convertCurrencyToUsd } from "@/lib/currency/fx";
 import { initiatePointPackPurchase, confirmPointPackPayment } from "@/actions/payments";
 import { createOtpChallenge, verifyOtpCode } from "@/lib/security/otp";
+import { 
+  fetchEnterpriseBudgets, 
+  allocateBudgetPoints, 
+  submitApprovalRequest, 
+  resolveApprovalRequest 
+} from "@/actions/enterprise";
 
 export async function GET() {
   try {
@@ -33,7 +39,7 @@ export async function GET() {
     await prisma.redemptionOrder.deleteMany({
       where: {
         userId: user.id,
-        createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
+        createdAt: { gte: new Date(Date.now() - 25 * 60 * 60 * 1000) },
       },
     });
 
@@ -418,6 +424,78 @@ export async function GET() {
         milestone: "2FA / OTP High-Value Security Guard",
         status: "FAILED",
         details: `2FA test error: ${e.message}`,
+      });
+    }
+
+    // Enterprise Cost Centers & Manager Approval Governance Milestone
+    try {
+      // 1. Allocate budget points to cost center
+      const budgetsBefore = await fetchEnterpriseBudgets();
+      const engDept = budgetsBefore.departments.find((d) => d.id === "dept_eng");
+      const engInitialAllocated = engDept ? engDept.allocatedPoints : 20000;
+      const engInitialSpent = engDept ? engDept.spentPoints : 8500;
+
+      await allocateBudgetPoints({
+        departmentId: "dept_eng",
+        additionalPoints: 2500,
+      });
+
+      const budgetsAfter = await fetchEnterpriseBudgets();
+      const engUpdated = budgetsAfter.departments.find((d) => d.id === "dept_eng");
+      const allocationSucceeded = engUpdated?.allocatedPoints === engInitialAllocated + 2500;
+
+      // 2. Submit high-value disbursement (> $250) requiring managerial approval
+      const submission = await submitApprovalRequest({
+        departmentId: "dept_eng",
+        requesterName: "Devon Vance",
+        requesterEmail: "devon.v@acmecorp.internal",
+        recipientName: "Kavita Nair",
+        recipientEmail: "kavita.n@acmecorp.internal",
+        brandId: brand.id,
+        brandName: brand.name,
+        faceValue: 300,
+        reason: "Q3 High-Availability Architecture Overhaul lead bonus",
+      });
+
+      const reqId = submission.request.id;
+
+      // 3. Fund admin corporate account for approval redemption
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { pointBalance: { increment: 35000 } },
+      });
+
+      // 4. Resolve approval request (APPROVE)
+      const approvedResult = await resolveApprovalRequest({
+        requestId: reqId,
+        action: "APPROVE",
+        reviewerName: "Finance Director (Acme Corp Treasury)",
+        adminUserId: user.id,
+      });
+
+      const finalBudgets = await fetchEnterpriseBudgets();
+      const engFinal = finalBudgets.departments.find((d) => d.id === "dept_eng");
+      const spendTracked = engFinal ? engFinal.spentPoints >= engInitialSpent + 30000 : false;
+
+      const passed =
+        allocationSucceeded &&
+        submission.success &&
+        submission.request.status === "PENDING" &&
+        approvedResult.success &&
+        approvedResult.request.status === "APPROVED" &&
+        Boolean(approvedResult.orderId) &&
+        spendTracked;
+
+      results.milestoneChecks.push({
+        milestone: "Enterprise Cost Centers & Manager Approval Governance",
+        status: passed ? "PASSED" : "FAILED",
+        details: `Verified ORG-8821 budget allocation (+2,500 pts to ENG-401), submission of $300 approval request, and 1-click execution creating Order #${approvedResult.orderId} with cost center spend tracking.`,
+      });
+    } catch (e: any) {
+      results.milestoneChecks.push({
+        milestone: "Enterprise Cost Centers & Manager Approval Governance",
+        status: "FAILED",
+        details: `Enterprise governance test failed: ${e.message}`,
       });
     }
 

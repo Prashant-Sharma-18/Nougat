@@ -4,6 +4,12 @@ import React, { useEffect, useState } from "react";
 import { getAdminMetrics, toggleBrandStatus, adjustUserPoints } from "@/actions/admin";
 import { populateSampleData, resetDemoData } from "@/actions/demoData";
 import { fetchEmailAuditLogs } from "@/actions/email";
+import { 
+  fetchEnterpriseBudgets, 
+  allocateBudgetPoints, 
+  fetchPendingApprovals, 
+  resolveApprovalRequest 
+} from "@/actions/enterprise";
 import { formatPoints, formatCurrency } from "@/lib/utils";
 import { 
   ShieldCheck, 
@@ -16,7 +22,12 @@ import {
   Radio,
   Send,
   Code,
-  Mail
+  Mail,
+  Building2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Briefcase
 } from "lucide-react";
 import { useUser } from "@/components/UserContext";
 
@@ -41,15 +52,24 @@ export default function AdminPage() {
   // Email Audit Logs state
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
 
+  // Enterprise Cost Centers & Approval Queue state
+  const [enterpriseBudgets, setEnterpriseBudgets] = useState<any | null>(null);
+  const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+
   const loadMetrics = async () => {
     try {
       setLoading(true);
-      const [data, logs] = await Promise.all([
+      const [data, logs, budgets, approvals] = await Promise.all([
         getAdminMetrics(),
         fetchEmailAuditLogs(),
+        fetchEnterpriseBudgets(),
+        fetchPendingApprovals(),
       ]);
       setMetrics(data);
       setEmailLogs(logs);
+      setEnterpriseBudgets(budgets);
+      setApprovalRequests(approvals);
       if (data.users.length > 0 && !selectedUserId) {
         setSelectedUserId(data.users[0].id);
       }
@@ -61,6 +81,45 @@ export default function AdminPage() {
       setFeedback({ message: err.message || "Failed to load metrics", isError: true });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAllocatePoints = async (deptId: string, pts: number) => {
+    try {
+      await allocateBudgetPoints({ departmentId: deptId, additionalPoints: pts });
+      setFeedback({ message: `Successfully allocated +${pts.toLocaleString()} pts to cost center.` });
+      const b = await fetchEnterpriseBudgets();
+      setEnterpriseBudgets(b);
+    } catch (e: any) {
+      setFeedback({ message: e.message, isError: true });
+    }
+  };
+
+  const handleReviewApproval = async (requestId: string, action: "APPROVE" | "REJECT") => {
+    try {
+      setResolvingId(requestId);
+      await resolveApprovalRequest({
+        requestId,
+        action,
+        reviewerName: "Finance Director (Acme Corp Treasury)",
+        adminUserId: selectedUserId || (metrics?.users?.[0]?.id ?? ""),
+      });
+      setFeedback({
+        message: action === "APPROVE" 
+          ? "Request approved and reward order executed."
+          : "Disbursement request rejected.",
+      });
+      const [b, a] = await Promise.all([
+        fetchEnterpriseBudgets(),
+        fetchPendingApprovals(),
+      ]);
+      setEnterpriseBudgets(b);
+      setApprovalRequests(a);
+      await refreshUserData();
+    } catch (e: any) {
+      setFeedback({ message: e.message, isError: true });
+    } finally {
+      setResolvingId(null);
     }
   };
 
@@ -614,6 +673,226 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Enterprise Cost Center Budgets (Acme Corp ORG-8821) */}
+      <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-zinc-100 gap-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-zinc-950" />
+            <h2 className="text-sm font-semibold text-zinc-950">Enterprise Cost Center Budgets</h2>
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-zinc-200 bg-zinc-50 text-zinc-700">
+              Acme Corp [ORG-8821]
+            </span>
+          </div>
+
+          {enterpriseBudgets && (
+            <div className="flex items-center gap-4 text-xs font-mono text-zinc-600">
+              <div>
+                <span className="text-zinc-400 text-[10px] uppercase block">Total Allocated</span>
+                <span className="font-semibold text-zinc-950">
+                  {enterpriseBudgets.totalAllocated.toLocaleString()} pts
+                </span>
+              </div>
+              <div className="h-6 w-px bg-zinc-200" />
+              <div>
+                <span className="text-zinc-400 text-[10px] uppercase block">Total Disbursed</span>
+                <span className="font-semibold text-zinc-950">
+                  {enterpriseBudgets.totalSpent.toLocaleString()} pts
+                </span>
+              </div>
+              <div className="h-6 w-px bg-zinc-200" />
+              <div>
+                <span className="text-zinc-400 text-[10px] uppercase block">Remaining Pool</span>
+                <span className="font-semibold text-zinc-950">
+                  {enterpriseBudgets.totalRemaining.toLocaleString()} pts
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Department Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {enterpriseBudgets?.departments?.map((dept: any) => (
+            <div
+              key={dept.id}
+              className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 flex flex-col justify-between space-y-3"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-800 font-medium">
+                    {dept.code}
+                  </span>
+                  <span className="text-[11px] font-mono text-zinc-500">
+                    {dept.utilizationRate}% utilized
+                  </span>
+                </div>
+                <h3 className="text-xs font-semibold text-zinc-900 leading-snug">{dept.name}</h3>
+                <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{dept.head}</p>
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-1.5">
+                <div className="h-1.5 w-full bg-zinc-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-zinc-900 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, dept.utilizationRate)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                  <span>{dept.spentPoints.toLocaleString()} spent</span>
+                  <span className="font-medium text-zinc-900">{dept.remainingPoints.toLocaleString()} left</span>
+                </div>
+              </div>
+
+              {/* Quick Top-up actions */}
+              <div className="pt-2 border-t border-zinc-200/60 flex items-center justify-between">
+                <span className="text-[10px] text-zinc-400 font-mono">Top-up:</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleAllocatePoints(dept.id, 2500)}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 hover:bg-zinc-200/70 text-zinc-800 transition-colors"
+                  >
+                    +2.5k
+                  </button>
+                  <button
+                    onClick={() => handleAllocatePoints(dept.id, 5000)}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 hover:bg-zinc-200/70 text-zinc-800 transition-colors"
+                  >
+                    +5.0k
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Corporate Disbursement Approval Queue (> $250 Compliance Policy) */}
+      <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-zinc-950" />
+            <h2 className="text-sm font-semibold text-zinc-950">Manager Approval Governance Queue</h2>
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-zinc-200 bg-zinc-50 text-zinc-600">
+              Policy Threshold &gt; $250.00
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-900 text-white font-medium ml-1">
+              {approvalRequests.filter((r) => r.status === "PENDING").length} Pending
+            </span>
+          </div>
+
+          <button
+            onClick={async () => {
+              const [b, a] = await Promise.all([
+                fetchEnterpriseBudgets(),
+                fetchPendingApprovals(),
+              ]);
+              setEnterpriseBudgets(b);
+              setApprovalRequests(a);
+            }}
+            className="text-xs font-mono text-zinc-500 hover:text-zinc-950 flex items-center gap-1 transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            <span>Refresh Queue</span>
+          </button>
+        </div>
+
+        {approvalRequests.length === 0 ? (
+          <div className="text-center py-6 text-xs text-zinc-400 font-mono">
+            No disbursement approval requests currently pending.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="border-b border-zinc-100 text-[10px] uppercase text-zinc-400">
+                  <th className="pb-2 font-medium">Requester & Cost Center</th>
+                  <th className="pb-2 font-medium">Recipient</th>
+                  <th className="pb-2 font-medium">Card Brand & Value</th>
+                  <th className="pb-2 font-medium">Business Justification</th>
+                  <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium text-right">Governance Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {approvalRequests.map((req) => (
+                  <tr key={req.id} className="hover:bg-zinc-50/80 transition-colors">
+                    <td className="py-2.5">
+                      <div className="font-medium text-zinc-900">{req.requesterName}</div>
+                      <div className="text-[10px] text-zinc-500 font-sans">{req.departmentName}</div>
+                    </td>
+                    <td className="py-2.5">
+                      <div className="text-zinc-900">{req.recipientName}</div>
+                      <div className="text-[10px] text-zinc-400">{req.recipientEmail}</div>
+                    </td>
+                    <td className="py-2.5">
+                      <div className="font-semibold text-zinc-900">
+                        ${req.faceValue}.00 {req.brandName}
+                      </div>
+                      <div className="text-[10px] text-zinc-500">
+                        {req.pointsRequired.toLocaleString()} pts
+                      </div>
+                    </td>
+                    <td className="py-2.5 text-zinc-600 font-sans max-w-xs truncate text-[11px]">
+                      {req.reason}
+                    </td>
+                    <td className="py-2.5">
+                      {req.status === "PENDING" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border border-zinc-200 bg-zinc-50 text-zinc-800">
+                          <Clock className="h-3 w-3 text-zinc-500" />
+                          <span>Pending</span>
+                        </span>
+                      )}
+                      {req.status === "APPROVED" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-950 text-white">
+                          <CheckCircle2 className="h-3 w-3 text-zinc-200" />
+                          <span>Approved</span>
+                        </span>
+                      )}
+                      {req.status === "REJECTED" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border border-zinc-200 bg-zinc-100 text-zinc-500">
+                          <XCircle className="h-3 w-3 text-zinc-400" />
+                          <span>Rejected</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      {req.status === "PENDING" ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleReviewApproval(req.id, "APPROVE")}
+                            disabled={resolvingId === req.id}
+                            className="px-2.5 py-1 rounded bg-zinc-950 hover:bg-zinc-800 text-white text-[11px] font-medium transition-colors flex items-center gap-1 disabled:opacity-50"
+                          >
+                            {resolvingId === req.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                            <span>Approve & Issue</span>
+                          </button>
+                          <button
+                            onClick={() => handleReviewApproval(req.id, "REJECT")}
+                            disabled={resolvingId === req.id}
+                            className="px-2.5 py-1 rounded border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-[11px] font-medium transition-colors disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-zinc-400 font-mono">
+                          {req.orderId ? `Order #${req.orderId}` : `By ${req.reviewerName || "Admin"}`}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Transactional Email Audit Trail */}
