@@ -41,11 +41,16 @@ interface BrandItem {
   name: string;
   description: string;
   logoUrl?: string;
-  minAmount: number;
-  maxAmount: number;
-  currency: string;
+  minAmount?: number;
+  maxAmount?: number;
+  currency?: string;
+  minRecipientVal?: number;
+  maxRecipientVal?: number;
+  currencyCode?: string;
+  denominations?: number[];
+  pointsPerUnit?: number;
   category?: string;
-  customAllowed: boolean;
+  customAllowed?: boolean;
   fixedValues?: string;
 }
 
@@ -94,14 +99,28 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
 
   // Helper to categorize brands
   const getBrandCategory = (brand: BrandItem): string => {
-    const name = brand.name.toLowerCase();
-    if (name.includes("starbucks") || name.includes("uber eats") || name.includes("doordash") || name.includes("chipotle")) {
+    const cat = (brand.category || "").toUpperCase();
+    if (cat.includes("FOOD") || cat.includes("DINING") || cat.includes("RESTAURANT")) {
       return "DINING";
     }
-    if (name.includes("apple") || name.includes("netflix") || name.includes("spotify") || name.includes("playstation")) {
+    if (cat.includes("ENTERTAINMENT") || cat.includes("GAME") || cat.includes("GAMING")) {
       return "ENTERTAINMENT";
     }
-    if (name.includes("uber") || name.includes("airbnb") || name.includes("delta")) {
+    if (cat.includes("TRAVEL") || cat.includes("CRUISE") || cat.includes("HOTEL")) {
+      return "TRAVEL";
+    }
+    if (cat.includes("RETAIL") || cat.includes("FASHION") || cat.includes("APPAREL") || cat.includes("TECH")) {
+      return "RETAIL";
+    }
+
+    const name = brand.name.toLowerCase();
+    if (name.includes("starbucks") || name.includes("steakhouse") || name.includes("grill") || name.includes("cafe") || name.includes("restaurant") || name.includes("pizza") || name.includes("papa")) {
+      return "DINING";
+    }
+    if (name.includes("amc") || name.includes("steam") || name.includes("battle") || name.includes("fandango") || name.includes("spotify") || name.includes("theatre")) {
+      return "ENTERTAINMENT";
+    }
+    if (name.includes("uber") || name.includes("airbnb") || name.includes("carnival") || name.includes("cruise") || name.includes("travel")) {
       return "TRAVEL";
     }
     return "RETAIL";
@@ -410,8 +429,23 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
         {/* 2026 Realistic Gift Card Mockup Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {filteredBrands.map((brand) => {
+            const minVal = brand.minAmount ?? brand.minRecipientVal ?? 10;
+            const maxVal = brand.maxAmount ?? brand.maxRecipientVal ?? 500;
+            const currency = brand.currency ?? brand.currencyCode ?? "USD";
+            const pointsPerUnit = brand.pointsPerUnit || 100;
+            const minPoints = minVal * pointsPerUnit;
             const initials = brand.name.slice(0, 2).toUpperCase();
-            const minPoints = brand.minAmount * 100;
+
+            const normalizedBrand = {
+              ...brand,
+              minRecipientVal: minVal,
+              maxRecipientVal: maxVal,
+              currencyCode: currency,
+              denominations: brand.denominations && brand.denominations.length > 0 ? brand.denominations : [minVal, Math.min(maxVal, 25), Math.min(maxVal, 50), maxVal],
+              pointsPerUnit,
+              logoUrl: brand.logoUrl || "",
+              category: brand.category || "Retail",
+            };
 
             return (
               <div
@@ -421,12 +455,22 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
                 <div className="space-y-3.5">
                   {/* Card Mockup Visual with 1.586 Card Ratio */}
                   <div className="w-full aspect-[1.586/1] bg-zinc-950 rounded-xl p-3.5 text-white flex flex-col justify-between border border-zinc-800 shadow-xs relative overflow-hidden group-hover:border-zinc-700 transition-colors">
-                    {/* Top Row: Brand Monogram & Contactless Icon */}
+                    {/* Top Row: Brand Monogram / Logo & Live Badge */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded bg-white text-zinc-950 font-bold text-[10px] font-mono flex items-center justify-center shrink-0">
-                          {initials}
-                        </div>
+                        {brand.logoUrl ? (
+                          <div className="h-6 w-6 rounded bg-white p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
+                            <img
+                              src={brand.logoUrl}
+                              alt={brand.name}
+                              className="h-full w-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-6 w-6 rounded bg-white text-zinc-950 font-bold text-[10px] font-mono flex items-center justify-center shrink-0">
+                            {initials}
+                          </div>
+                        )}
                         <span className="font-bold text-xs tracking-tight text-white truncate max-w-[120px]">
                           {brand.name}
                         </span>
@@ -435,7 +479,7 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
                       <div className="flex items-center gap-1.5 text-zinc-400">
                         <Wifi className="h-3 w-3 rotate-90" />
                         <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-400">
-                          PASS
+                          LIVE
                         </span>
                       </div>
                     </div>
@@ -446,7 +490,7 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
                         Stored Value
                       </span>
                       <div className="text-base font-bold font-mono text-white tracking-tight">
-                        ${brand.minAmount} – ${brand.maxAmount} {brand.currency}
+                        ${minVal} – ${maxVal} {currency}
                       </div>
                     </div>
 
@@ -482,7 +526,7 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
                     <div className="flex items-center justify-between text-[11px] font-mono text-zinc-600 pt-1">
                       <span>Starting from:</span>
                       <span className="font-semibold text-zinc-900">
-                        {minPoints.toLocaleString()} pts (${brand.minAmount})
+                        {minPoints.toLocaleString()} pts (${minVal})
                       </span>
                     </div>
                   </div>
@@ -491,7 +535,7 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
                 {/* Redeem Action Button */}
                 <button
                   type="button"
-                  onClick={() => setSelectedBrand(brand)}
+                  onClick={() => setSelectedBrand(normalizedBrand as any)}
                   className="w-full py-2.5 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-xs"
                 >
                   <Gift className="h-3.5 w-3.5 text-zinc-300" />

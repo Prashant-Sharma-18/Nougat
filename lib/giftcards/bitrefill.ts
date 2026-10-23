@@ -1,4 +1,5 @@
 import axios from "axios";
+import { prisma } from "@/lib/prisma";
 
 const BITREFILL_API_URL = process.env.BITREFILL_API_URL || "https://api.bitrefill.com/v2";
 const BITREFILL_API_KEY = process.env.BITREFILL_API_KEY || "";
@@ -202,5 +203,104 @@ export async function orderBitrefillGiftCard(
       instructions: "Redeem directly on the merchant platform or bitrefill.com/redeem.",
     },
   };
+}
+
+/**
+ * Synchronizes real digital gift cards from Bitrefill API v2 into PostgreSQL catalog cache.
+ */
+export async function syncBitrefillCatalog(): Promise<{ count: number; message: string }> {
+  if (!BITREFILL_API_KEY || BITREFILL_API_KEY.startsWith("MOCK_")) {
+    return { count: 0, message: "Bitrefill API key is not configured." };
+  }
+
+  try {
+    const headers = {
+      ...getBitrefillAuthHeaders(),
+      Accept: "application/json",
+    };
+
+    const response = await axios.get(`${BITREFILL_API_URL}/products?country=US&limit=50`, {
+      headers,
+      timeout: 20000,
+    });
+
+    const rawProducts = response.data?.data || response.data || [];
+    if (!Array.isArray(rawProducts)) {
+      return { count: 0, message: "Unexpected response from Bitrefill API." };
+    }
+
+    const giftCards = rawProducts.filter(
+      (p: any) => p.recipient_type !== "phone_number" && p.packages && p.packages.length > 0
+    );
+
+    let count = 0;
+    for (const item of giftCards) {
+      const rawNumbers: number[] = (item.packages || [])
+        .map((p: any) => Number(p.value || p.amount))
+        .filter((v: number) => !isNaN(v) && v > 0);
+      const denoms: number[] = Array.from(new Set(rawNumbers)).sort((a, b) => a - b);
+
+      const minVal = denoms[0] || 10;
+      const maxVal = denoms[denoms.length - 1] || 500;
+
+      let category = "Retail";
+      const cats = (item.categories || []).map((c: string) => c.toLowerCase());
+      if (cats.some((c: string) => c.includes("food") || c.includes("restaurant"))) {
+        category = "Food & Drink";
+      } else if (
+        cats.some((c: string) => c.includes("game") || c.includes("entertainment") || c.includes("experience"))
+      ) {
+        category = "Entertainment";
+      } else if (cats.some((c: string) => c.includes("travel") || c.includes("cruise") || c.includes("hotel"))) {
+        category = "Travel";
+      } else if (cats.some((c: string) => c.includes("tech") || c.includes("electronics"))) {
+        category = "Tech";
+      } else if (cats.some((c: string) => c.includes("apparel") || c.includes("fashion") || c.includes("clothing"))) {
+        category = "Fashion";
+      }
+
+      const logoUrl = `https://cdn.bitrefill.com/primg/w360h216/${item.image || item.id}.webp`;
+
+      await prisma.brandCatalogCache.upsert({
+        where: { id: item.id },
+        update: {
+          name: item.name,
+          category,
+          currencyCode: item.currency || "USD",
+          minRecipientVal: minVal,
+          maxRecipientVal: maxVal,
+          logoUrl,
+          description: `Official ${item.name} digital gift card via Bitrefill. Instant voucher delivery.`,
+          denominations: denoms.slice(0, 6),
+          pointsPerUnit: 100.0,
+          isActive: true,
+        },
+        create: {
+          id: item.id,
+          name: item.name,
+          category,
+          currencyCode: item.currency || "USD",
+          minRecipientVal: minVal,
+          maxRecipientVal: maxVal,
+          logoUrl,
+          description: `Official ${item.name} digital gift card via Bitrefill. Instant voucher delivery.`,
+          denominations: denoms.slice(0, 6),
+          pointsPerUnit: 100.0,
+          isActive: true,
+        },
+      });
+      count++;
+    }
+
+    // Deactivate legacy mock items so only real Bitrefill cards show
+    await prisma.brandCatalogCache.updateMany({
+      where: { id: { startsWith: "prod_" } },
+      data: { isActive: false },
+    });
+
+    return { count, message: `Successfully synced ${count} real gift cards from Bitrefill.` };
+  } catch (err: any) {
+    return { count: 0, message: `Bitrefill sync error: ${err.message}` };
+  }
 }
 

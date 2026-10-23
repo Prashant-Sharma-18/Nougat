@@ -18,6 +18,7 @@ import {
   createBannerAction, 
   toggleBannerStatusAction 
 } from "@/actions/promotions";
+import { syncBitrefillCatalogAction } from "@/actions/catalog";
 import { formatPoints, formatCurrency } from "@/lib/utils";
 import { 
   ShieldCheck, 
@@ -97,6 +98,22 @@ export default function AdminPage() {
   const [newBannerCtaLink, setNewBannerCtaLink] = useState("/");
   const [newBannerAudience, setNewBannerAudience] = useState<"ALL" | "PERSONAL" | "CORPORATE">("ALL");
   const [creatingBanner, setCreatingBanner] = useState(false);
+
+  // Bitrefill live sync state
+  const [syncingBitrefill, setSyncingBitrefill] = useState(false);
+
+  const handleSyncBitrefill = async () => {
+    try {
+      setSyncingBitrefill(true);
+      const res = await syncBitrefillCatalogAction();
+      setFeedback({ message: res.message, isError: res.count === 0 });
+      await loadMetrics();
+    } catch (err: any) {
+      setFeedback({ message: `Sync failed: ${err.message}`, isError: true });
+    } finally {
+      setSyncingBitrefill(false);
+    }
+  };
 
   const loadMetrics = async () => {
     try {
@@ -450,6 +467,19 @@ export default function AdminPage() {
 
           <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0">
             <button
+              onClick={handleSyncBitrefill}
+              disabled={syncingBitrefill}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-900 text-xs font-mono font-semibold transition-colors shadow-xs disabled:opacity-50"
+            >
+              {syncingBitrefill ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />
+              ) : (
+                <Radio className="h-3.5 w-3.5 text-zinc-700" />
+              )}
+              <span>Sync Bitrefill Cards</span>
+            </button>
+
+            <button
               onClick={loadMetrics}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-mono font-semibold transition-colors shadow-xs"
             >
@@ -623,14 +653,28 @@ export default function AdminPage() {
       {/* TAB 1: Catalog Listings & Brands */}
       {adminTab === "LISTINGS" && (
         <div className="bg-white rounded-xl border border-zinc-200 shadow-xs overflow-hidden">
-          <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="font-semibold text-sm text-zinc-950">Brand Catalog Controls</h3>
               <p className="text-xs text-zinc-500">Toggle live availability for consumer & corporate redemptions</p>
             </div>
-            <span className="text-xs font-mono text-zinc-400">
-              {metrics?.brands?.length || 0} Brands in Catalog
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono text-zinc-500">
+                {metrics?.brands?.length || 0} Brands in Catalog
+              </span>
+              <button
+                onClick={handleSyncBitrefill}
+                disabled={syncingBitrefill}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 disabled:opacity-50 text-white text-xs font-mono font-medium transition-colors"
+              >
+                {syncingBitrefill ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 text-zinc-400" />
+                )}
+                <span>Sync Real Bitrefill Cards</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -649,9 +693,19 @@ export default function AdminPage() {
                 {metrics?.brands?.map((brand: any) => (
                   <tr key={brand.id} className="hover:bg-zinc-50/50">
                     <td className="px-6 py-3.5 font-medium text-zinc-900 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-xs text-zinc-700">
-                        {brand.name.slice(0, 2).toUpperCase()}
-                      </div>
+                      {brand.logoUrl ? (
+                        <div className="w-8 h-8 rounded bg-white border border-zinc-200 p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
+                          <img
+                            src={brand.logoUrl}
+                            alt={brand.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-xs text-zinc-700 shrink-0">
+                          {brand.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                       <span>{brand.name}</span>
                     </td>
                     <td className="px-6 py-3">

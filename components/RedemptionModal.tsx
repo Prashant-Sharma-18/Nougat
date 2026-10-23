@@ -54,7 +54,7 @@ export default function RedemptionModal({
   const [selectedDenomination, setSelectedDenomination] = useState<number>(
     brand.denominations[0] || 25
   );
-  const [preferredProvider, setPreferredProvider] = useState<"AUTO_FAILOVER" | "TREMENDOUS" | "RELOADLY">("AUTO_FAILOVER");
+  const [preferredProvider, setPreferredProvider] = useState<"AUTO_FAILOVER" | "BITREFILL" | "TREMENDOUS" | "RELOADLY">("AUTO_FAILOVER");
   const [isGift, setIsGift] = useState(false);
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -604,7 +604,7 @@ export default function RedemptionModal({
             <label className="block text-[10px] font-mono uppercase text-zinc-500 tracking-wider">
               Fulfillment Provider Route
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => setPreferredProvider("AUTO_FAILOVER")}
@@ -615,6 +615,17 @@ export default function RedemptionModal({
                 }`}
               >
                 Auto-Failover
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreferredProvider("BITREFILL")}
+                className={`py-1.5 px-2 rounded-lg border text-center text-xs font-mono font-medium transition-colors ${
+                  preferredProvider === "BITREFILL"
+                    ? "border-zinc-950 bg-zinc-950 text-white font-semibold"
+                    : "border-zinc-200 text-zinc-700 hover:bg-zinc-50"
+                }`}
+              >
+                Bitrefill Live
               </button>
               <button
                 type="button"

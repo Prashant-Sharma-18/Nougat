@@ -36,3 +36,8 @@ export async function getBrandById(id: string) {
   });
 }
 
+export async function syncBitrefillCatalogAction() {
+  const { syncBitrefillCatalog } = await import("@/lib/giftcards/bitrefill");
+  return syncBitrefillCatalog();
+}
+
