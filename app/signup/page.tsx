@@ -16,7 +16,8 @@ import {
   AlertCircle,
   Briefcase,
   Gift,
-  Coins
+  Coins,
+  ShieldCheck
 } from "lucide-react";
 
 function SignupForm() {
@@ -71,9 +72,9 @@ function SignupForm() {
       switchUser(user.id);
 
       if (accountType === "ENTERPRISE") {
-        router.push("/bulk-rewards");
+        router.push("/corporate");
       } else {
-        router.push("/wallet");
+        router.push("/");
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to create account. Please try again.");
@@ -255,6 +256,23 @@ function SignupForm() {
             <ArrowRight className="h-3.5 w-3.5 text-zinc-400" />
           </button>
         </form>
+      </div>
+
+      {/* Admin Access Notice */}
+      <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl text-center text-xs text-zinc-500 font-mono space-y-1">
+        <div className="flex items-center justify-center gap-1.5 text-zinc-800 font-semibold font-sans">
+          <ShieldCheck className="h-3.5 w-3.5 text-zinc-700" />
+          <span>Platform Administrator Access</span>
+        </div>
+        <p className="text-[11px] text-zinc-500">
+          The Master Admin Operations Console is restricted to pre-defined security IDs. Public sign-up is disabled.
+        </p>
+        <Link
+          href="/login?portal=admin"
+          className="inline-block text-[11px] text-zinc-950 font-semibold underline mt-0.5"
+        >
+          Sign In with Pre-defined Admin ID
+        </Link>
       </div>
 
       {/* Footer Link */}

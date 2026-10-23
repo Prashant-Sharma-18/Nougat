@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { getUsers, getOrCreateDefaultUser } from "@/actions/users";
 import { CurrencyCode } from "@/lib/currency/fx";
+import { getAccountType, AccountType } from "@/lib/auth/roles";
 
 export type PortalMode = "PERSONAL" | "CORPORATE" | "ADMIN" | "GENERAL" | "ENTERPRISE";
 
@@ -20,6 +21,7 @@ interface UserContextType {
   loading: boolean;
   currentCurrency: CurrencyCode;
   portalMode: PortalMode;
+  accountType: AccountType;
   setPortalMode: (mode: PortalMode) => void;
   isPersonal: boolean;
   isCorporate: boolean;
@@ -27,6 +29,7 @@ interface UserContextType {
   isEnterprise: boolean;
   setCurrentCurrency: (currency: CurrencyCode) => void;
   switchUser: (userId: string) => void;
+  logout: () => void;
   refreshUserData: () => Promise<void>;
   updateUserBalance: (newBalance: number) => void;
 }
@@ -38,29 +41,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentCurrency, setCurrencyState] = useState<CurrencyCode>("USD");
-  const [portalMode, setPortalModeState] = useState<PortalMode>("PERSONAL");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedCurrency = localStorage.getItem("loyalty_currency") as CurrencyCode | null;
       if (savedCurrency) setCurrencyState(savedCurrency);
-
-      const savedMode = localStorage.getItem("loyalty_portal_mode") as PortalMode | null;
-      if (savedMode) {
-        if (savedMode === "GENERAL") setPortalModeState("PERSONAL");
-        else if (savedMode === "ENTERPRISE") setPortalModeState("CORPORATE");
-        else setPortalModeState(savedMode);
-      }
     }
   }, []);
-
-  const setPortalMode = (mode: PortalMode) => {
-    const normalized = mode === "GENERAL" ? "PERSONAL" : mode === "ENTERPRISE" ? "CORPORATE" : mode;
-    setPortalModeState(normalized);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("loyalty_portal_mode", normalized);
-    }
-  };
 
   const setCurrentCurrency = (currency: CurrencyCode) => {
     setCurrencyState(currency);
@@ -84,16 +71,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const matching = savedId ? allUsers.find((u) => u.id === savedId) : null;
         const active = (matching || allUsers[0]) as UserProfile;
         setCurrentUser(active);
-
-        const savedMode = typeof window !== "undefined" ? localStorage.getItem("loyalty_portal_mode") as PortalMode | null : null;
-        if (savedMode) {
-          if (savedMode === "GENERAL") setPortalModeState("PERSONAL");
-          else if (savedMode === "ENTERPRISE") setPortalModeState("CORPORATE");
-          else setPortalModeState(savedMode);
-        } else {
-          const isEnt = active.role === "ADMIN" || active.email.includes("corp") || active.email.includes("admin");
-          setPortalModeState(isEnt ? "CORPORATE" : "PERSONAL");
-        }
       }
     } catch (e) {
       console.error("Failed to load users:", e);
@@ -110,13 +87,33 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const found = users.find((u) => u.id === userId);
     if (found) {
       setCurrentUser(found);
-      const isEnt = found.role === "ADMIN" || found.email.includes("corp") || found.email.includes("admin");
-      const nextMode: PortalMode = isEnt ? "CORPORATE" : "PERSONAL";
-      setPortalModeState(nextMode);
       if (typeof window !== "undefined") {
         localStorage.setItem("loyalty_active_user_id", userId);
-        localStorage.setItem("loyalty_portal_mode", nextMode);
       }
+    }
+  };
+
+  const logout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("loyalty_active_user_id");
+    }
+    // Switch to first personal consumer user
+    const personal = users.find((u) => getAccountType(u) === "PERSONAL") || users[0];
+    if (personal) {
+      setCurrentUser(personal);
+    }
+  };
+
+  const setPortalMode = (mode: PortalMode) => {
+    const targetType = mode === "ENTERPRISE" || mode === "CORPORATE" 
+      ? "CORPORATE" 
+      : mode === "ADMIN" 
+      ? "ADMIN" 
+      : "PERSONAL";
+    // Find matching user for requested portal mode
+    const match = users.find((u) => getAccountType(u) === targetType);
+    if (match) {
+      switchUser(match.id);
     }
   };
 
@@ -143,10 +140,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isCorporate = portalMode === "CORPORATE" || portalMode === "ENTERPRISE";
-  const isAdmin = portalMode === "ADMIN";
-  const isPersonal = !isCorporate && !isAdmin;
+  // Derive account role and portal access strictly from the active user's identity
+  const accountType: AccountType = getAccountType(currentUser);
+  const isPersonal = accountType === "PERSONAL";
+  const isCorporate = accountType === "CORPORATE";
+  const isAdmin = accountType === "ADMIN";
   const isEnterprise = isCorporate;
+  const portalMode: PortalMode = accountType;
 
   return (
     <UserContext.Provider
@@ -156,6 +156,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         loading,
         currentCurrency,
         portalMode,
+        accountType,
         setPortalMode,
         isPersonal,
         isCorporate,
@@ -163,6 +164,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         isEnterprise,
         setCurrentCurrency,
         switchUser,
+        logout,
         refreshUserData,
         updateUserBalance,
       }}

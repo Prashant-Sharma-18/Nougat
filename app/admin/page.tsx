@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { getAdminMetrics, toggleBrandStatus, adjustUserPoints } from "@/actions/admin";
 import { populateSampleData, resetDemoData } from "@/actions/demoData";
 import { fetchEmailAuditLogs } from "@/actions/email";
@@ -41,12 +42,13 @@ import {
   Sliders,
   Plus,
   Percent,
-  X
+  X,
+  Lock
 } from "lucide-react";
 import { useUser } from "@/components/UserContext";
 
 export default function AdminPage() {
-  const { refreshUserData } = useUser();
+  const { currentUser, isAdmin, loading: userLoading, refreshUserData } = useUser();
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ message: string; isError?: boolean } | null>(null);
@@ -353,6 +355,57 @@ export default function AdminPage() {
       setWebhookDispatching(false);
     }
   };
+
+  if (!userLoading && !isAdmin) {
+    return (
+      <div className="max-w-lg mx-auto py-16 text-center space-y-6">
+        <div className="h-14 w-14 rounded-2xl bg-zinc-100 border border-zinc-200 text-zinc-800 flex items-center justify-center mx-auto">
+          <ShieldCheck className="h-7 w-7 text-zinc-950" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="px-2.5 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-950 text-white font-medium">
+            Super Admin Access Restricted
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-950">
+            Administrative Credentials Required
+          </h1>
+          <p className="text-xs text-zinc-600 leading-relaxed max-w-md mx-auto">
+            The Master Admin Operations Console is strictly restricted to pre-defined security IDs. Public sign-up is disabled. You are currently signed in as <strong>{currentUser?.email || "Guest"}</strong>.
+          </p>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-zinc-200 text-xs text-left space-y-3 font-mono">
+          <div className="flex items-start gap-2.5">
+            <Lock className="h-4 w-4 text-zinc-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-zinc-900 block font-sans">Pre-defined Security IDs Only</span>
+              <span className="text-[11px] text-zinc-500">
+                To manage merchant catalog listings, promotional coupons, merchandising banners, and platform operations, please authenticate with a pre-provisioned administrative security ID.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/login?portal=admin"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs"
+          >
+            <Sliders className="h-3.5 w-3.5" />
+            <span>Sign In with Pre-defined Admin ID</span>
+          </Link>
+
+          <Link
+            href="/"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <span>Return to Consumer Portal</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getAccountType, PREDEFINED_ADMIN_EMAILS } from "@/lib/auth/roles";
 
 export async function getUsers() {
   return prisma.user.findMany({
@@ -40,6 +41,52 @@ export async function getOrCreateDefaultUser() {
     });
   }
 
+  // Ensure predefined corporate demo user exists
+  const corpUser = await prisma.user.findUnique({
+    where: { email: "elena.corp@acmeworkspace.com" },
+  });
+  if (!corpUser) {
+    const c = await prisma.user.create({
+      data: {
+        email: "elena.corp@acmeworkspace.com",
+        name: "Elena Rostova (Acme Corp)",
+        role: "ADMIN",
+        pointBalance: 125000,
+      },
+    });
+    await prisma.pointLedger.create({
+      data: {
+        userId: c.id,
+        amount: 125000,
+        type: "EARNED",
+        description: "Acme Corp Initial Treasury Allocation",
+      },
+    });
+  }
+
+  // Ensure predefined super admin user exists
+  const adminUser = await prisma.user.findUnique({
+    where: { email: "admin@loyaltyrewards.io" },
+  });
+  if (!adminUser) {
+    const a = await prisma.user.create({
+      data: {
+        email: "admin@loyaltyrewards.io",
+        name: "Platform Administrator",
+        role: "ADMIN",
+        pointBalance: 50000,
+      },
+    });
+    await prisma.pointLedger.create({
+      data: {
+        userId: a.id,
+        amount: 50000,
+        type: "EARNED",
+        description: "Platform Security Operations Allocation",
+      },
+    });
+  }
+
   return user;
 }
 
@@ -51,10 +98,23 @@ export async function registerUser({
 }: {
   name: string;
   email: string;
-  accountType: "PERSONAL" | "ENTERPRISE";
+  accountType: "PERSONAL" | "CORPORATE" | "ENTERPRISE" | "ADMIN";
   companyName?: string;
 }) {
+  // Public registration is strictly forbidden for administrative accounts
+  if (accountType === "ADMIN") {
+    throw new Error(
+      "Administrative accounts cannot be registered publicly. The Admin Operations Console is restricted to pre-defined platform security IDs."
+    );
+  }
+
   const cleanEmail = email.toLowerCase().trim();
+
+  // Guard: Cannot sign up using a reserved admin email
+  if (PREDEFINED_ADMIN_EMAILS.includes(cleanEmail)) {
+    throw new Error("This email is reserved for platform administration. Please sign in instead.");
+  }
+
   const existing = await prisma.user.findUnique({
     where: { email: cleanEmail },
   });
@@ -63,15 +123,15 @@ export async function registerUser({
     throw new Error("An account with this email already exists. Please sign in instead.");
   }
 
-  const isEnterprise = accountType === "ENTERPRISE";
-  const startingPoints = isEnterprise ? 50000 : 2500;
-  const displayName = isEnterprise && companyName ? `${name} (${companyName})` : name;
+  const isCorporate = accountType === "CORPORATE" || accountType === "ENTERPRISE";
+  const startingPoints = isCorporate ? 50000 : 2500;
+  const displayName = isCorporate && companyName ? `${name} (${companyName})` : name;
 
   const user = await prisma.user.create({
     data: {
       email: cleanEmail,
       name: displayName,
-      role: isEnterprise ? "ADMIN" : "USER",
+      role: isCorporate ? "ADMIN" : "USER",
       pointBalance: startingPoints,
     },
   });
@@ -81,25 +141,40 @@ export async function registerUser({
       userId: user.id,
       amount: startingPoints,
       type: "EARNED",
-      description: isEnterprise
-        ? `Enterprise Workspace Setup Bonus (${companyName || "Organization Pool"})`
+      description: isCorporate
+        ? `Corporate Workspace Setup Bonus (${companyName || "Organization Treasury"})`
         : "Personal Loyalty Welcome Bonus",
     },
   });
 
-  return user;
+  return { ...user, accountType: isCorporate ? "CORPORATE" : "PERSONAL" };
 }
 
-export async function loginUser({ email }: { email: string }) {
+export async function loginUser({
+  email,
+  portalTarget,
+}: {
+  email: string;
+  portalTarget?: "PERSONAL" | "CORPORATE" | "ADMIN";
+}) {
   const cleanEmail = email.toLowerCase().trim();
   const user = await prisma.user.findUnique({
     where: { email: cleanEmail },
   });
 
   if (!user) {
-    throw new Error("No account found with this email. Please check your email or sign up.");
+    throw new Error("No account found with this email. Please verify your address or create an account.");
   }
 
-  return user;
+  const detectedType = getAccountType(user);
+
+  // If user attempted to log in to Admin portal without an admin account
+  if (portalTarget === "ADMIN" && detectedType !== "ADMIN") {
+    throw new Error(
+      "Access Denied: This account does not have platform administrative privileges. The Admin Portal is restricted to pre-defined security IDs."
+    );
+  }
+
+  return { ...user, accountType: detectedType };
 }
 

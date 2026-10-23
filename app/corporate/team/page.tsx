@@ -24,7 +24,7 @@ import {
 import Link from "next/link";
 
 export default function CorporateTeamPage() {
-  const { currentUser, refreshUserData } = useUser();
+  const { currentUser, isCorporate, isAdmin, loading: userLoading, refreshUserData } = useUser();
   const [members, setMembers] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,6 +144,46 @@ export default function CorporateTeamPage() {
 
   const totalCards = members.reduce((sum, m) => sum + m.totalCardsReceived, 0);
   const totalValue = members.reduce((sum, m) => sum + m.totalValueReceived, 0);
+
+  if (!userLoading && !isCorporate && !isAdmin) {
+    return (
+      <div className="max-w-lg mx-auto py-16 text-center space-y-6">
+        <div className="h-14 w-14 rounded-2xl bg-zinc-100 border border-zinc-200 text-zinc-800 flex items-center justify-center mx-auto">
+          <Building2 className="h-7 w-7 text-zinc-800" />
+        </div>
+
+        <div className="space-y-2">
+          <span className="px-2.5 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-100 text-zinc-800 border border-zinc-200">
+            Corporate Team Roster Restricted
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-950">
+            Corporate Account Required
+          </h1>
+          <p className="text-xs text-zinc-600 leading-relaxed max-w-md mx-auto">
+            You are currently signed in with a <strong>Personal Consumer</strong> account ({currentUser?.email}). Corporate employee rosters and 1-click team gift card disburser are only accessible to verified company accounts.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/login?portal=corporate"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs"
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            <span>Sign In with Corporate ID</span>
+          </Link>
+
+          <Link
+            href="/signup?type=enterprise"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <span>Register Organization</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
