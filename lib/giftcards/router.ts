@@ -1,7 +1,8 @@
 import { orderGiftCard as orderTremendous, IssueGiftCardParams } from "./tremendous";
 import { orderReloadlyGiftCard, IssueReloadlyParams } from "./reloadly";
+import { orderBitrefillGiftCard, IssueBitrefillParams } from "./bitrefill";
 
-export type SupportedProvider = "TREMENDOUS" | "RELOADLY" | "AUTO_FAILOVER";
+export type SupportedProvider = "BITREFILL" | "TREMENDOUS" | "RELOADLY" | "AUTO_FAILOVER";
 
 export interface UnifiedFulfillmentParams {
   idempotencyKey: string;
@@ -15,7 +16,7 @@ export interface UnifiedFulfillmentParams {
 
 export interface UnifiedOrderResult {
   providerOrderId: string;
-  providerUsed: "TREMENDOUS" | "RELOADLY";
+  providerUsed: "BITREFILL" | "TREMENDOUS" | "RELOADLY";
   claimUrl: string | null;
   cardCode: string | null;
   cardPin: string | null;
@@ -24,8 +25,8 @@ export interface UnifiedOrderResult {
 }
 
 /**
- * Smart Provider Router with Automatic Failover.
- * Tries the primary provider first; if unavailable or rejected, falls back seamlessly to the secondary provider.
+ * Smart Provider Router with Automatic Multi-Provider Failover.
+ * Dynamically routes across Bitrefill, Tremendous, and Reloadly.
  */
 export async function fulfillGiftCardOrder(
   params: UnifiedFulfillmentParams
@@ -34,13 +35,57 @@ export async function fulfillGiftCardOrder(
 
   // If forced failure requested for testing ACID rollback
   if (params.simulateFailure) {
-    throw new Error("Simulated Provider Outage: Both Tremendous and Reloadly rejected the order.");
+    throw new Error("Simulated Provider Outage: All gift card providers rejected the order.");
   }
 
-  // Route: Tremendous Preferred or Auto-Failover Primary
-  if (mode === "TREMENDOUS" || mode === "AUTO_FAILOVER") {
+  // 1. Explicit Bitrefill route
+  if (mode === "BITREFILL") {
+    const bitResult = await orderBitrefillGiftCard({
+      idempotencyKey: params.idempotencyKey,
+      recipientEmail: params.recipientEmail,
+      recipientName: params.recipientName,
+      amountInDollars: params.amountInDollars,
+      productId: params.productId,
+    });
+
+    return {
+      providerOrderId: bitResult.id,
+      providerUsed: "BITREFILL",
+      claimUrl: bitResult.card?.claimUrl || null,
+      cardCode: bitResult.card?.number || null,
+      cardPin: bitResult.card?.pin || null,
+      status: bitResult.status,
+    };
+  }
+
+  // 2. Explicit Reloadly route
+  if (mode === "RELOADLY") {
+    const reloadlyResult = await orderReloadlyGiftCard({
+      idempotencyKey: params.idempotencyKey,
+      recipientEmail: params.recipientEmail,
+      recipientName: params.recipientName,
+      amountInDollars: params.amountInDollars,
+      productId: params.productId,
+    });
+
+    return {
+      providerOrderId: reloadlyResult.id,
+      providerUsed: "RELOADLY",
+      claimUrl: reloadlyResult.card?.claimUrl || null,
+      cardCode: reloadlyResult.card?.number || null,
+      cardPin: reloadlyResult.card?.pin || null,
+      status: reloadlyResult.status,
+    };
+  }
+
+  // 3. Auto-failover: If Bitrefill has a live API key, use Bitrefill first!
+  const hasLiveBitrefillKey =
+    Boolean(process.env.BITREFILL_API_KEY) &&
+    !process.env.BITREFILL_API_KEY?.startsWith("MOCK_");
+
+  if (mode === "AUTO_FAILOVER" && hasLiveBitrefillKey) {
     try {
-      const result = await orderTremendous({
+      const bitResult = await orderBitrefillGiftCard({
         idempotencyKey: params.idempotencyKey,
         recipientEmail: params.recipientEmail,
         recipientName: params.recipientName,
@@ -48,28 +93,73 @@ export async function fulfillGiftCardOrder(
         productId: params.productId,
       });
 
-      const reward = result.rewards?.[0];
       return {
-        providerOrderId: result.id,
-        providerUsed: "TREMENDOUS",
-        claimUrl: reward?.delivery?.link || null,
-        cardCode: reward?.card?.number || null,
-        cardPin: reward?.card?.pin || null,
-        status: result.status,
+        providerOrderId: bitResult.id,
+        providerUsed: "BITREFILL",
+        claimUrl: bitResult.card?.claimUrl || null,
+        cardCode: bitResult.card?.number || null,
+        cardPin: bitResult.card?.pin || null,
+        status: bitResult.status,
       };
-    } catch (tremError: any) {
-      if (mode === "TREMENDOUS") {
-        throw tremError; // Don't failover if user explicitly locked provider
-      }
-
+    } catch (bitErr: any) {
       console.warn(
-        `[Provider Router] Primary provider (Tremendous) failed: ${tremError.message}. Triggering auto-failover to Reloadly...`
+        `[Provider Router] Live Bitrefill fulfillment failed: ${bitErr.message}. Cascading to secondary provider...`
       );
+    }
+  }
 
-      // Attempt Secondary Provider (Reloadly)
+  // 4. Tremendous or Auto-Failover Primary
+  try {
+    const result = await orderTremendous({
+      idempotencyKey: params.idempotencyKey,
+      recipientEmail: params.recipientEmail,
+      recipientName: params.recipientName,
+      amountInDollars: params.amountInDollars,
+      productId: params.productId,
+    });
+
+    const reward = result.rewards?.[0];
+    return {
+      providerOrderId: result.id,
+      providerUsed: "TREMENDOUS",
+      claimUrl: reward?.delivery?.link || null,
+      cardCode: reward?.card?.number || null,
+      cardPin: reward?.card?.pin || null,
+      status: result.status,
+    };
+  } catch (tremError: any) {
+    if (mode === "TREMENDOUS") {
+      throw tremError; // Don't failover if user explicitly locked provider
+    }
+
+    console.warn(
+      `[Provider Router] Primary provider (Tremendous) failed: ${tremError.message}. Triggering auto-failover to Reloadly...`
+    );
+
+    // Attempt Secondary Provider (Reloadly)
+    try {
+      const reloadlyResult = await orderReloadlyGiftCard({
+        idempotencyKey: `${params.idempotencyKey}-failover`,
+        recipientEmail: params.recipientEmail,
+        recipientName: params.recipientName,
+        amountInDollars: params.amountInDollars,
+        productId: params.productId,
+      });
+
+      return {
+        providerOrderId: reloadlyResult.id,
+        providerUsed: "RELOADLY",
+        claimUrl: reloadlyResult.card?.claimUrl || null,
+        cardCode: reloadlyResult.card?.number || null,
+        cardPin: reloadlyResult.card?.pin || null,
+        status: reloadlyResult.status,
+        failoverTriggered: true,
+      };
+    } catch (reloadlyError: any) {
+      // Final attempt: Bitrefill fallback if not already tried
       try {
-        const reloadlyResult = await orderReloadlyGiftCard({
-          idempotencyKey: `${params.idempotencyKey}-failover`,
+        const bitFallback = await orderBitrefillGiftCard({
+          idempotencyKey: `${params.idempotencyKey}-bit-failover`,
           recipientEmail: params.recipientEmail,
           recipientName: params.recipientName,
           amountInDollars: params.amountInDollars,
@@ -77,38 +167,19 @@ export async function fulfillGiftCardOrder(
         });
 
         return {
-          providerOrderId: reloadlyResult.id,
-          providerUsed: "RELOADLY",
-          claimUrl: reloadlyResult.card?.claimUrl || null,
-          cardCode: reloadlyResult.card?.number || null,
-          cardPin: reloadlyResult.card?.pin || null,
-          status: reloadlyResult.status,
+          providerOrderId: bitFallback.id,
+          providerUsed: "BITREFILL",
+          claimUrl: bitFallback.card?.claimUrl || null,
+          cardCode: bitFallback.card?.number || null,
+          cardPin: bitFallback.card?.pin || null,
+          status: bitFallback.status,
           failoverTriggered: true,
         };
-      } catch (reloadlyError: any) {
+      } catch (bitFallbackErr: any) {
         throw new Error(
-          `All providers failed fulfillment. Tremendous error: ${tremError.message} | Reloadly error: ${reloadlyError.message}`
+          `All providers failed fulfillment. Tremendous: ${tremError.message} | Reloadly: ${reloadlyError.message} | Bitrefill: ${bitFallbackErr.message}`
         );
       }
     }
   }
-
-  // Explicit Reloadly route
-  const reloadlyResult = await orderReloadlyGiftCard({
-    idempotencyKey: params.idempotencyKey,
-    recipientEmail: params.recipientEmail,
-    recipientName: params.recipientName,
-    amountInDollars: params.amountInDollars,
-    productId: params.productId,
-  });
-
-  return {
-    providerOrderId: reloadlyResult.id,
-    providerUsed: "RELOADLY",
-    claimUrl: reloadlyResult.card?.claimUrl || null,
-    cardCode: reloadlyResult.card?.number || null,
-    cardPin: reloadlyResult.card?.pin || null,
-    status: reloadlyResult.status,
-  };
 }
-

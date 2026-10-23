@@ -157,10 +157,25 @@ export async function redeemPointsForCard({
       );
     }
 
-    // Deduct points
-    const updatedUser = await tx.user.update({
+    // Atomic conditional decrement: prevents race condition / double-spend across concurrent transactions
+    const updateResult = await tx.user.updateMany({
+      where: {
+        id: userId,
+        pointBalance: { gte: finalPointsSpent },
+      },
+      data: {
+        pointBalance: { decrement: finalPointsSpent },
+      },
+    });
+
+    if (updateResult.count === 0) {
+      throw new Error(
+        `Insufficient point balance. Another transaction consumed the remaining points.`
+      );
+    }
+
+    const updatedUser = await tx.user.findUniqueOrThrow({
       where: { id: userId },
-      data: { pointBalance: { decrement: finalPointsSpent } },
     });
 
     // Create pending/processing order
