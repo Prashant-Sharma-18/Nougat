@@ -205,70 +205,71 @@ export default function CorporateTeamPage() {
       )}
 
       {/* Header Banner */}
-      <div className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-8 shadow-xs">
+      <div className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-8 shadow-xs card-hover-subtle">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl">
+          <div className="space-y-3 max-w-xl">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-950 text-white font-medium">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-zinc-950 text-white font-medium">
+                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                 Corporate Team Directory
               </span>
               <span className="text-[11px] font-mono text-zinc-500">
-                Acme Corp [ORG-8821]
+                Workspace: Acme Corp [ORG-8821]
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950">
-              Team Members & Direct Gifting.
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-950 leading-tight">
+              Workforce Roster & 1-Click Gifting.
             </h1>
             <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
-              Maintain your organization's team roster, track gift cards awarded to each employee, and disburse digital reward vouchers directly to team members with one click.
+              Maintain your organization&apos;s team roster, inspect cumulative gift cards awarded per employee, and dispatch instant digital gift vouchers directly with automated departmental cost center billing.
             </p>
           </div>
 
           {/* Quick Metrics */}
-          <div className="flex items-center gap-4 text-xs font-mono text-zinc-600 bg-zinc-50 p-4 rounded-xl border border-zinc-200">
+          <div className="flex items-center gap-5 text-xs font-mono text-zinc-600 bg-zinc-50 p-5 rounded-2xl border border-zinc-200 shadow-xs">
             <div>
-              <span className="text-zinc-400 text-[10px] uppercase block">Listed Team</span>
-              <span className="font-bold text-zinc-950 text-lg">{members.length}</span>
+              <span className="text-zinc-400 text-[10px] uppercase font-mono block">Enrolled Team</span>
+              <span className="font-bold text-zinc-950 text-2xl font-mono tabular-nums">{members.length}</span>
             </div>
-            <div className="h-8 w-px bg-zinc-200" />
+            <div className="h-10 w-px bg-zinc-200" />
             <div>
-              <span className="text-zinc-400 text-[10px] uppercase block">Disbursed Cards</span>
-              <span className="font-bold text-zinc-950 text-lg">{totalCards}</span>
+              <span className="text-zinc-400 text-[10px] uppercase font-mono block">Dispatched Cards</span>
+              <span className="font-bold text-zinc-950 text-2xl font-mono tabular-nums">{totalCards}</span>
             </div>
-            <div className="h-8 w-px bg-zinc-200" />
+            <div className="h-10 w-px bg-zinc-200" />
             <div>
-              <span className="text-zinc-400 text-[10px] uppercase block">Total Value</span>
-              <span className="font-bold text-zinc-950 text-lg">${totalValue}.00</span>
+              <span className="text-zinc-400 text-[10px] uppercase font-mono block">Total Value</span>
+              <span className="font-bold text-zinc-950 text-2xl font-mono tabular-nums">${totalValue}.00</span>
             </div>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="pt-6 border-t border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-6">
-          <div className="relative w-full sm:w-72">
-            <Search className="h-3.5 w-3.5 absolute left-3 top-3 text-zinc-400" />
+          <div className="relative w-full sm:w-80">
+            <Search className="h-4 w-4 absolute left-3.5 top-3 text-zinc-400" />
             <input
               type="text"
-              placeholder="Search team members..."
+              placeholder="Search by name, email, or department..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-zinc-400"
+              className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400 shadow-xs"
             />
           </div>
 
           <div className="flex items-center gap-2">
             <Link
               href="/bulk-rewards"
-              className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors"
+              className="px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors shadow-xs"
             >
               Bulk CSV Disburser
             </Link>
 
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-medium transition-colors flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-4 w-4" />
               <span>Add Team Member</span>
             </button>
           </div>
@@ -276,61 +277,68 @@ export default function CorporateTeamPage() {
       </div>
 
       {/* Team Roster Table */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
+      <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-4 card-hover-subtle">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-zinc-950" />
-            <h2 className="text-sm font-semibold text-zinc-950">Listed Team Directory ({filteredMembers.length})</h2>
+            <Users className="h-5 w-5 text-zinc-950" />
+            <h2 className="text-sm font-bold text-zinc-950">Acme Corp Workforce Roster ({filteredMembers.length})</h2>
           </div>
-          <span className="text-[10px] font-mono text-zinc-400">Direct Fulfillment Engine</span>
+          <span className="text-[11px] font-mono text-zinc-400">Direct Tremendous + Reloadly Engine</span>
         </div>
 
         {filteredMembers.length === 0 ? (
-          <div className="text-center py-8 text-xs text-zinc-400 font-mono">
+          <div className="text-center py-12 text-xs text-zinc-400 font-mono">
             No team members matched your search criteria.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-zinc-100 text-[10px] uppercase text-zinc-400">
-                  <th className="pb-2 font-medium">Team Member</th>
-                  <th className="pb-2 font-medium">Email</th>
-                  <th className="pb-2 font-medium">Department Cost Center</th>
-                  <th className="pb-2 font-medium">Awards Received</th>
-                  <th className="pb-2 font-medium">Last Gifted</th>
-                  <th className="pb-2 font-medium text-right">Actions</th>
+                <tr className="border-b border-zinc-100 text-[10px] font-mono uppercase text-zinc-400">
+                  <th className="pb-3 font-semibold">Team Member</th>
+                  <th className="pb-3 font-semibold">Work Email</th>
+                  <th className="pb-3 font-semibold">Cost Center</th>
+                  <th className="pb-3 font-semibold">Awards Received</th>
+                  <th className="pb-3 font-semibold">Last Gifted</th>
+                  <th className="pb-3 font-semibold text-right">Instant Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
                 {filteredMembers.map((member) => (
                   <tr key={member.id} className="hover:bg-zinc-50/80 transition-colors">
-                    <td className="py-3">
-                      <div className="font-semibold text-zinc-900">{member.name}</div>
-                      <div className="text-[10px] text-zinc-400 font-sans">{member.title}</div>
-                    </td>
-                    <td className="py-3 text-zinc-600">{member.email}</td>
-                    <td className="py-3">
-                      <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[10px] font-medium border border-zinc-200">
-                        {member.departmentName.split(" ")[0]}
+                    <td className="py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-[11px] font-mono shrink-0">
+                          {member.name.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-bold text-zinc-950">{member.name}</div>
+                          <div className="text-[11px] text-zinc-500">{member.title}</div>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3">
-                      <span className="font-semibold text-zinc-950">{member.totalCardsReceived} cards</span>
-                      <span className="text-[10px] text-zinc-400 block">${member.totalValueReceived}.00 total</span>
+                    <td className="py-3.5 font-mono text-zinc-600">{member.email}</td>
+                    <td className="py-3.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-800 text-[10px] font-mono font-semibold border border-zinc-200">
+                        {member.departmentName.split(" ")[0]}
+                      </span>
                     </td>
-                    <td className="py-3 text-zinc-500 text-[11px]">
+                    <td className="py-3.5">
+                      <span className="font-bold font-mono text-zinc-950 tabular-nums">{member.totalCardsReceived} cards</span>
+                      <span className="text-[10px] font-mono text-zinc-400 block">${member.totalValueReceived}.00 cumulative</span>
+                    </td>
+                    <td className="py-3.5 text-zinc-500 font-mono text-[11px]">
                       {member.lastGiftedAt ? new Date(member.lastGiftedAt).toLocaleDateString() : "Never"}
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="py-3.5 text-right">
                       <button
                         onClick={() => {
                           setSelectedMember(member);
                           setGiftMessage(`Spot Recognition Award for ${member.name}. Outstanding contribution to Acme Corp!`);
                         }}
-                        className="px-2.5 py-1 rounded bg-zinc-950 hover:bg-zinc-800 text-white text-[11px] font-medium transition-colors inline-flex items-center gap-1 shadow-xs"
+                        className="px-3 py-1.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-[11px] font-semibold transition-colors inline-flex items-center gap-1.5 shadow-xs"
                       >
-                        <Gift className="h-3 w-3" />
+                        <Gift className="h-3.5 w-3.5 text-zinc-300" />
                         <span>Send Gift Card</span>
                       </button>
                     </td>

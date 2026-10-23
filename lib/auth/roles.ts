@@ -50,3 +50,4 @@ export function isCorporateAccount(user: { id?: string; email: string; role?: st
 export function isPersonalAccount(user: { id?: string; email: string; role?: string } | null): boolean {
   return getAccountType(user) === "PERSONAL";
 }
+

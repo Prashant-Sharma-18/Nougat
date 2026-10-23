@@ -86,3 +86,4 @@ export default function CorporatePortalPage() {
 
   return <CorporateDashboardView initialBrands={brands} />;
 }
+

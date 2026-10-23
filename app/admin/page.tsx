@@ -43,7 +43,8 @@ import {
   Plus,
   Percent,
   X,
-  Lock
+  Lock,
+  FileSpreadsheet
 } from "lucide-react";
 import { useUser } from "@/components/UserContext";
 
@@ -409,64 +410,109 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-950 tracking-tight flex items-center gap-2.5">
-            <ShieldCheck className="h-6 w-6 text-zinc-800" />
-            Platform Admin Console
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
-            Manage catalog availability, monitor outstanding points, and issue manual ledger adjustments.
-          </p>
-        </div>
+      {/* 2026 Admin Operations Console Header */}
+      <div className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-8 shadow-xs card-hover-subtle">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-zinc-950 text-white font-medium">
+                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                Super Admin Operations Console
+              </span>
+              <span className="text-[11px] font-mono text-zinc-500">
+                Pre-defined Security Authentication Active
+              </span>
+            </div>
 
-        <button
-          onClick={loadMetrics}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-mono font-medium transition-colors"
-        >
-          <RefreshCw className="h-3.5 w-3.5 text-zinc-500" />
-          <span>Refresh Metrics</span>
-        </button>
+            <h1 className="text-3xl sm:text-4xl font-bold text-zinc-950 tracking-tight leading-tight">
+              Platform Merchandising & Governance.
+            </h1>
+
+            <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+              Supervise all multi-tenant subsystems: active merchant brand listings, checkout discount coupons, promotional hero banners, enterprise cost centers, and double-entry transaction ledgers.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] font-mono text-zinc-500">
+              <span className="flex items-center gap-1.5 text-zinc-800">
+                <ShieldCheck className="h-3.5 w-3.5 text-zinc-950" />
+                <span>Tremendous v2 API: CONNECTED</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-zinc-800">
+                <ShieldCheck className="h-3.5 w-3.5 text-zinc-950" />
+                <span>Reloadly Failover: HOT STANDBY</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-zinc-800">
+                <ShieldCheck className="h-3.5 w-3.5 text-zinc-950" />
+                <span>Double-Spend Prevention: ACID ATOMIC</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0">
+            <button
+              onClick={loadMetrics}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-mono font-semibold transition-colors shadow-xs"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-zinc-300" />
+              <span>Refresh Live Telemetry</span>
+            </button>
+
+            <Link
+              href="/history"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 text-xs font-mono font-medium transition-colors"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 text-zinc-600" />
+              <span>Inspect Master Ledger</span>
+            </Link>
+          </div>
+        </div>
       </div>
 
       {feedback && (
         <div
-          className={`p-3.5 rounded-lg text-xs font-mono flex items-center gap-2 ${
+          className={`p-4 rounded-xl text-xs font-mono flex items-center justify-between shadow-xs animate-in fade-in ${
             feedback.isError
               ? "bg-zinc-100 text-zinc-900 border border-zinc-300"
-              : "bg-zinc-100 text-zinc-900 border border-zinc-300"
+              : "bg-zinc-950 text-white"
           }`}
         >
-          {feedback.isError ? (
-            <AlertTriangle className="h-4 w-4 shrink-0 text-zinc-700" />
-          ) : (
-            <Check className="h-4 w-4 shrink-0 text-zinc-700" />
-          )}
-          <span>{feedback.message}</span>
+          <div className="flex items-center gap-2">
+            {feedback.isError ? (
+              <AlertTriangle className="h-4 w-4 shrink-0 text-zinc-700" />
+            ) : (
+              <Check className="h-4 w-4 shrink-0 text-zinc-300" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+          <button
+            onClick={() => setFeedback(null)}
+            className="text-[11px] font-mono text-zinc-400 hover:text-white"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
       {/* KPI Cards */}
       {metrics && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
-          <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-xs space-y-1">
-            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider">
+          <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-xs space-y-1.5 card-hover-subtle">
+            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider font-semibold">
               Circulating Point Liability
             </span>
-            <p className="text-2xl font-bold text-zinc-950">
-              {formatPoints(metrics.totalPointsInCirculation)} <span className="text-xs font-normal text-zinc-500">PTS</span>
+            <p className="text-2xl font-bold text-zinc-950 tabular-nums">
+              {formatPoints(metrics.totalPointsInCirculation)} <span className="text-xs font-normal text-zinc-400">PTS</span>
             </p>
             <p className="text-[11px] text-zinc-500">
-              ≈ {formatCurrency(metrics.totalPointsInCirculation / 100)} USD value
+              ≈ {formatCurrency(metrics.totalPointsInCirculation / 100)} USD Reserve
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-xs space-y-1">
-            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider">
+          <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-xs space-y-1.5 card-hover-subtle">
+            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider font-semibold">
               Total Gift Cards Issued
             </span>
-            <p className="text-2xl font-bold text-zinc-950">
+            <p className="text-2xl font-bold text-zinc-950 tabular-nums">
               ${formatCurrency(metrics.totalValueRedeemed).replace("$", "")}
             </p>
             <p className="text-[11px] text-zinc-500">
@@ -474,27 +520,27 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-xs space-y-1">
-            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider">
+          <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-xs space-y-1.5 card-hover-subtle">
+            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider font-semibold">
               Points Burned to Date
             </span>
-            <p className="text-2xl font-bold text-zinc-950">
+            <p className="text-2xl font-bold text-zinc-950 tabular-nums">
               {formatPoints(metrics.totalPointsRedeemed)}
             </p>
             <p className="text-[11px] text-zinc-500">
-              Fulfilled through gateway
+              Fulfilled through Tremendous/Reloadly
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-xs space-y-1">
-            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider">
+          <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-xs space-y-1.5 card-hover-subtle">
+            <span className="text-[10px] uppercase text-zinc-500 block tracking-wider font-semibold">
               Registered Accounts
             </span>
-            <p className="text-2xl font-bold text-zinc-950">
+            <p className="text-2xl font-bold text-zinc-950 tabular-nums">
               {metrics.totalUsersCount} Members
             </p>
             <p className="text-[11px] text-zinc-500">
-              Active program participants
+              Personal & Corporate tenants
             </p>
           </div>
         </div>

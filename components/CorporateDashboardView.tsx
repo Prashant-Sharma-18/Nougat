@@ -160,65 +160,89 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
       )}
 
       {/* Enterprise Executive Cockpit Header */}
-      <div className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-8 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-950 text-white font-medium">
-                Enterprise Executive Cockpit
+      <div className="bg-white rounded-2xl border border-zinc-200 p-6 sm:p-8 shadow-xs card-hover-subtle">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="space-y-3 max-w-xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-zinc-950 text-white font-medium">
+                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                Enterprise Corporate Portal
               </span>
               <span className="text-[11px] font-mono text-zinc-500">
-                Organization: Acme Corp [ORG-8821]
+                Workspace: Acme Corporation [ORG-8821]
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950">
-              Workforce Rewards & Cost Center Governance.
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-950 leading-tight">
+              Workforce Gifting & Cost Center Governance.
             </h1>
             <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
-              Allocate department points budgets, supervise high-value disbursement requests (&gt; $250 policy threshold), and manage automated employee incentive schedules.
+              Disburse digital rewards to team members, supervise departmental budgets, govern high-value managerial approvals (&gt; $250 policy), and maintain automated incentive schedules.
             </p>
+
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] font-mono text-zinc-500">
+              <span className="flex items-center gap-1.5 text-zinc-800">
+                <CheckCircle2 className="h-3.5 w-3.5 text-zinc-950" />
+                <span>Dual Provider Failover (Tremendous + Reloadly)</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-zinc-800">
+                <CheckCircle2 className="h-3.5 w-3.5 text-zinc-950" />
+                <span>Split-Tender Co-Pay Enabled</span>
+              </span>
+            </div>
           </div>
 
           {/* Treasury Telemetry Card */}
-          <div className="lg:w-96 shrink-0 bg-zinc-50 rounded-xl border border-zinc-200 p-5 space-y-3.5 font-mono text-xs">
-            <div className="flex items-center justify-between border-b border-zinc-200 pb-2.5">
+          <div className="lg:w-96 shrink-0 bg-zinc-50 rounded-2xl border border-zinc-200 p-5 space-y-4 shadow-xs">
+            <div className="flex items-start justify-between border-b border-zinc-200/80 pb-3">
               <div>
-                <span className="text-[10px] uppercase text-zinc-400 block">Corporate Treasury Pool</span>
-                <span className="text-xl font-bold text-zinc-950">{formatPoints(balance)} pts</span>
+                <span className="text-[10px] uppercase font-mono text-zinc-500 tracking-wider block">
+                  Corporate Treasury Balance
+                </span>
+                <div className="flex items-baseline gap-1.5 mt-0.5">
+                  <span className="text-3xl font-bold font-mono text-zinc-950 tabular-nums tracking-tight">
+                    {formatPoints(balance)}
+                  </span>
+                  <span className="text-xs font-mono font-medium text-zinc-500">pts</span>
+                </div>
               </div>
-              <span className="text-right text-zinc-500 text-[11px] block">
-                ~ ${dollarEquivalent.toFixed(2)} USD
-              </span>
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-mono text-zinc-500 tracking-wider block">
+                  Pool Equivalent
+                </span>
+                <span className="text-base font-semibold font-mono text-zinc-900 tabular-nums block mt-0.5">
+                  ${dollarEquivalent.toFixed(2)} USD
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-1.5 text-[11px] text-zinc-600">
-              <div className="flex justify-between">
-                <span>Credit Co-Pay Line:</span>
-                <span className="font-semibold text-zinc-900">$25,000 Authorized</span>
+            <div className="space-y-1.5 text-[11px] font-mono text-zinc-600">
+              <div className="flex justify-between items-center py-0.5">
+                <span>Credit Line Authorized:</span>
+                <span className="font-semibold text-zinc-900">$25,000.00</span>
               </div>
-              <div className="flex justify-between">
-                <span>Fulfillment Engine:</span>
+              <div className="flex justify-between items-center py-0.5">
+                <span>Primary Routing:</span>
                 <span className="font-semibold text-zinc-900">Tremendous API v2</span>
               </div>
-              <div className="flex justify-between">
-                <span>Failover Router:</span>
-                <span className="font-semibold text-zinc-900">Reloadly Active</span>
+              <div className="flex justify-between items-center py-0.5">
+                <span>Secondary Failover:</span>
+                <span className="font-semibold text-zinc-900">Reloadly Engine</span>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-zinc-200 flex items-center justify-between">
+            <div className="pt-2 border-t border-zinc-200/80 flex items-center justify-between">
               <Link
-                href="/bulk-rewards"
+                href="/corporate/team"
                 className="text-xs font-sans font-semibold text-zinc-950 hover:underline flex items-center gap-1"
               >
-                <span>Bulk Distribution Portal</span>
+                <span>Team Roster & Gifting</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
-                href="/admin"
-                className="text-[11px] font-sans text-zinc-500 hover:text-zinc-900"
+                href="/bulk-rewards"
+                className="text-[11px] font-mono text-zinc-500 hover:text-zinc-900"
               >
-                Admin Console
+                Bulk CSV Run
               </Link>
             </div>
           </div>
@@ -227,38 +251,38 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
 
       {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs space-y-1">
-          <span className="text-[10px] font-mono uppercase text-zinc-500 block">Total Budget Pool</span>
-          <div className="text-xl font-bold font-mono text-zinc-950">
-            {budgets?.totalAllocated?.toLocaleString() ?? "50,000"} pts
+        <div className="p-5 rounded-2xl border border-zinc-200 bg-white shadow-xs space-y-1.5 card-hover-subtle">
+          <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider block">Total Budget Pool</span>
+          <div className="text-2xl font-bold font-mono text-zinc-950 tabular-nums">
+            {budgets?.totalAllocated?.toLocaleString() ?? "50,000"} <span className="text-xs text-zinc-400 font-normal">pts</span>
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono block">4 Cost Centers</span>
+          <span className="text-[11px] text-zinc-500 font-mono block">Across 4 Cost Centers</span>
         </div>
 
-        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs space-y-1">
-          <span className="text-[10px] font-mono uppercase text-zinc-500 block">Disbursed Spend</span>
-          <div className="text-xl font-bold font-mono text-zinc-950">
-            {budgets?.totalSpent?.toLocaleString() ?? "19,200"} pts
+        <div className="p-5 rounded-2xl border border-zinc-200 bg-white shadow-xs space-y-1.5 card-hover-subtle">
+          <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider block">Disbursed Spend</span>
+          <div className="text-2xl font-bold font-mono text-zinc-950 tabular-nums">
+            {budgets?.totalSpent?.toLocaleString() ?? "19,200"} <span className="text-xs text-zinc-400 font-normal">pts</span>
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono block">
-            {budgets?.totalAllocated ? Math.round((budgets.totalSpent / budgets.totalAllocated) * 100) : 0}% Utilized
+          <span className="text-[11px] text-zinc-500 font-mono block">
+            {budgets?.totalAllocated ? Math.round((budgets.totalSpent / budgets.totalAllocated) * 100) : 0}% Budget Utilized
           </span>
         </div>
 
-        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs space-y-1">
-          <span className="text-[10px] font-mono uppercase text-zinc-500 block">Pending Approvals</span>
-          <div className="text-xl font-bold font-mono text-zinc-950">
+        <div className="p-5 rounded-2xl border border-zinc-200 bg-white shadow-xs space-y-1.5 card-hover-subtle">
+          <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider block">Pending Approvals</span>
+          <div className="text-2xl font-bold font-mono text-zinc-950 tabular-nums">
             {pendingApprovalsCount}
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono block">Policy &gt; $250.00</span>
+          <span className="text-[11px] text-zinc-500 font-mono block">High-Value Threshold &gt; $250</span>
         </div>
 
-        <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-xs space-y-1">
-          <span className="text-[10px] font-mono uppercase text-zinc-500 block">Active Automations</span>
-          <div className="text-xl font-bold font-mono text-zinc-950">
+        <div className="p-5 rounded-2xl border border-zinc-200 bg-white shadow-xs space-y-1.5 card-hover-subtle">
+          <span className="text-[10px] font-mono uppercase text-zinc-500 tracking-wider block">Active Automations</span>
+          <div className="text-2xl font-bold font-mono text-zinc-950 tabular-nums">
             {activeSchedulesCount}
           </div>
-          <span className="text-[11px] text-zinc-400 font-mono block">Auto-disbursed monthly</span>
+          <span className="text-[11px] text-zinc-500 font-mono block">Automated Monthly Pipelines</span>
         </div>
       </div>
 
@@ -322,21 +346,23 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
       )}
 
       {/* Department Cost Center Budgets Grid */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
+      <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-5 card-hover-subtle">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-zinc-950" />
-            <h2 className="text-sm font-semibold text-zinc-950">Department Cost Center Budgets</h2>
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-zinc-200 bg-zinc-50 text-zinc-700">
-              Acme Corp [ORG-8821]
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-zinc-950 text-white flex items-center justify-center">
+              <Building2 className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-zinc-950">Department Cost Center Budgets</h2>
+              <span className="text-[11px] text-zinc-500">Autonomous departmental budget allocations</span>
+            </div>
           </div>
 
           <Link
-            href="/admin"
-            className="text-xs font-mono text-zinc-500 hover:text-zinc-950 flex items-center gap-1"
+            href="/corporate/team"
+            className="text-xs font-mono text-zinc-600 hover:text-zinc-950 flex items-center gap-1 font-medium"
           >
-            <span>Manage Cost Centers</span>
+            <span>Team Gifting Roster</span>
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
@@ -345,48 +371,50 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
           {budgets?.departments?.map((dept: any) => (
             <div
               key={dept.id}
-              className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 flex flex-col justify-between space-y-3"
+              className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/70 hover:bg-zinc-50 hover:border-zinc-300 transition-all flex flex-col justify-between space-y-3"
             >
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-800 font-medium">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-zinc-200 text-zinc-800 font-bold">
                     {dept.code}
                   </span>
-                  <span className="text-[11px] font-mono text-zinc-500">
-                    {dept.utilizationRate}% utilized
+                  <span className="text-[11px] font-mono text-zinc-600 font-medium">
+                    {dept.utilizationRate}% used
                   </span>
                 </div>
-                <h3 className="text-xs font-semibold text-zinc-900 leading-snug">{dept.name}</h3>
+                <h3 className="text-xs font-bold text-zinc-950 leading-snug">{dept.name}</h3>
                 <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{dept.head}</p>
               </div>
 
               {/* Progress Bar */}
               <div className="space-y-1.5">
-                <div className="h-1.5 w-full bg-zinc-200 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-zinc-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-zinc-900 rounded-full transition-all"
+                    className="h-full bg-zinc-950 rounded-full transition-all duration-300"
                     style={{ width: `${Math.min(100, dept.utilizationRate)}%` }}
                   />
                 </div>
                 <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
                   <span>{dept.spentPoints.toLocaleString()} spent</span>
-                  <span className="font-medium text-zinc-900">{dept.remainingPoints.toLocaleString()} left</span>
+                  <span className="font-semibold text-zinc-900">{dept.remainingPoints.toLocaleString()} remaining</span>
                 </div>
               </div>
 
               {/* Instant Top-up buttons */}
-              <div className="pt-2 border-t border-zinc-200/60 flex items-center justify-between">
-                <span className="text-[10px] text-zinc-400 font-mono">Top-up:</span>
+              <div className="pt-2 border-t border-zinc-200/80 flex items-center justify-between">
+                <span className="text-[10px] text-zinc-500 font-mono">Grant Points:</span>
                 <div className="flex items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => handleAllocate(dept.id, 2500)}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 hover:bg-zinc-200/70 text-zinc-800 transition-colors"
+                    className="text-[10px] font-mono px-2 py-1 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-900 font-medium transition-colors shadow-xs"
                   >
                     +2.5k
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleAllocate(dept.id, 5000)}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded border border-zinc-200 hover:bg-zinc-200/70 text-zinc-800 transition-colors"
+                    className="text-[10px] font-mono px-2 py-1 rounded-md border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-900 font-medium transition-colors shadow-xs"
                   >
                     +5.0k
                   </button>
@@ -400,33 +428,33 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
       {/* Dual Governance Grid: Manager Approvals Queue + Scheduled Automations Hub */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Manager Approvals Queue */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4 flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-4 flex flex-col justify-between card-hover-subtle">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
               <div className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-zinc-950" />
-                <h3 className="text-xs font-semibold text-zinc-950">Manager Approval Queue</h3>
-                <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-zinc-900 text-white font-medium">
+                <h3 className="text-sm font-bold text-zinc-950">Manager Approval Queue</h3>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-zinc-950 text-white font-medium">
                   {pendingApprovalsCount} Pending
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-400">Policy &gt; $250</span>
+              <span className="text-[10px] font-mono text-zinc-400">Policy &gt; $250.00</span>
             </div>
 
             {approvals.length === 0 ? (
-              <div className="py-8 text-center text-xs text-zinc-400 font-mono">
+              <div className="py-12 text-center text-xs text-zinc-400 font-mono">
                 No corporate approvals currently pending.
               </div>
             ) : (
               <div className="divide-y divide-zinc-100 max-h-80 overflow-y-auto">
                 {approvals.map((req) => (
-                  <div key={req.id} className="py-3 flex items-center justify-between gap-3 text-xs">
+                  <div key={req.id} className="py-3.5 flex items-center justify-between gap-3 text-xs">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-zinc-900">{req.recipientName}</span>
-                        <span className="text-[10px] font-mono text-zinc-400">({req.departmentName.split(" ")[0]})</span>
+                        <span className="font-bold text-zinc-950">{req.recipientName}</span>
+                        <span className="text-[10px] font-mono text-zinc-500">({req.departmentName.split(" ")[0]})</span>
                       </div>
-                      <div className="text-[11px] text-zinc-500 font-sans truncate max-w-xs mt-0.5">
+                      <div className="text-[11px] text-zinc-600 font-sans truncate max-w-xs mt-0.5">
                         ${req.faceValue} {req.brandName} • {req.reason}
                       </div>
                     </div>
@@ -435,9 +463,10 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
                       {req.status === "PENDING" ? (
                         <div className="flex items-center gap-1.5">
                           <button
+                            type="button"
                             onClick={() => handleResolveApproval(req.id, "APPROVE")}
                             disabled={resolvingApprovalId === req.id}
-                            className="px-2 py-1 rounded bg-zinc-950 hover:bg-zinc-800 text-white text-[10px] font-medium transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-[11px] font-medium transition-colors flex items-center gap-1 shadow-xs"
                           >
                             {resolvingApprovalId === req.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -447,9 +476,10 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
                             <span>Approve</span>
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleResolveApproval(req.id, "REJECT")}
                             disabled={resolvingApprovalId === req.id}
-                            className="px-2 py-1 rounded border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-[10px] font-medium transition-colors"
+                            className="px-2.5 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-[11px] font-medium transition-colors"
                           >
                             Reject
                           </button>
@@ -470,36 +500,36 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
 
           <div className="pt-3 border-t border-zinc-100 text-right">
             <Link
-              href="/admin"
-              className="text-xs font-mono text-zinc-500 hover:text-zinc-950 inline-flex items-center gap-1"
+              href="/orders"
+              className="text-xs font-mono text-zinc-600 hover:text-zinc-950 inline-flex items-center gap-1 font-medium"
             >
-              <span>Full Audit Queue</span>
+              <span>Fulfillment & Audit Orders</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
 
         {/* Right: Scheduled Recurring Automations */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4 flex flex-col justify-between">
+        <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-xs space-y-4 flex flex-col justify-between card-hover-subtle">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-zinc-950" />
-                <h3 className="text-xs font-semibold text-zinc-950">Active Recurring Automations</h3>
-                <span className="text-[10px] font-mono uppercase px-1.5 py-0.2 rounded bg-zinc-900 text-white font-medium">
+                <h3 className="text-sm font-bold text-zinc-950">Active Recurring Automations</h3>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-zinc-950 text-white font-medium">
                   {activeSchedulesCount} Active
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-400">Auto-Disbursed</span>
+              <span className="text-[10px] font-mono text-zinc-400">Monthly Run</span>
             </div>
 
             <div className="divide-y divide-zinc-100 max-h-80 overflow-y-auto">
               {schedules.map((s) => (
-                <div key={s.id} className="py-3 flex items-center justify-between gap-3 text-xs">
+                <div key={s.id} className="py-3.5 flex items-center justify-between gap-3 text-xs">
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-zinc-900">{s.name}</span>
-                      <span className="text-[10px] font-mono uppercase bg-zinc-100 px-1.5 py-0.2 rounded text-zinc-700">
+                      <span className="font-bold text-zinc-950">{s.name}</span>
+                      <span className="text-[10px] font-mono uppercase bg-zinc-100 px-2 py-0.5 rounded text-zinc-700 font-medium">
                         {s.frequency}
                       </span>
                     </div>
@@ -509,9 +539,10 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => handleTriggerAutomation(s.id)}
                     disabled={executingSchedId === s.id}
-                    className="px-2.5 py-1 rounded bg-zinc-950 hover:bg-zinc-800 text-white text-[10px] font-medium transition-colors flex items-center gap-1 shrink-0 disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-[11px] font-medium transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50 shadow-xs"
                   >
                     {executingSchedId === s.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -528,9 +559,9 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
           <div className="pt-3 border-t border-zinc-100 text-right">
             <Link
               href="/bulk-rewards"
-              className="text-xs font-mono text-zinc-500 hover:text-zinc-950 inline-flex items-center gap-1"
+              className="text-xs font-mono text-zinc-600 hover:text-zinc-950 inline-flex items-center gap-1 font-medium"
             >
-              <span>Manage Schedules & Logs</span>
+              <span>Manage Bulk Schedules & Logs</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -540,59 +571,67 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
       {/* Corporate Action Command Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Link
-          href="/bulk-rewards"
-          className="p-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors shadow-xs flex items-center justify-between group"
+          href="/corporate/team"
+          className="p-5 rounded-2xl border border-zinc-200 bg-white hover:border-zinc-300 transition-all shadow-xs flex items-center justify-between group card-hover-subtle"
         >
-          <div className="flex items-center gap-2.5">
-            <Users className="h-4 w-4 text-zinc-700" />
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-950 flex items-center justify-center shrink-0">
+              <Users className="h-5 w-5" />
+            </div>
             <div>
-              <span className="text-xs font-semibold text-zinc-950 block">Bulk Batch Disburser</span>
-              <span className="text-[10px] text-zinc-400 font-mono">Spreadsheet CSV Import</span>
+              <span className="text-xs font-bold text-zinc-950 block">Team Directory</span>
+              <span className="text-[11px] text-zinc-500">1-click gift card sending</span>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
+          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-950 transition-colors" />
         </Link>
 
         <Link
-          href="/admin"
-          className="p-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors shadow-xs flex items-center justify-between group"
+          href="/bulk-rewards"
+          className="p-5 rounded-2xl border border-zinc-200 bg-white hover:border-zinc-300 transition-all shadow-xs flex items-center justify-between group card-hover-subtle"
         >
-          <div className="flex items-center gap-2.5">
-            <Sliders className="h-4 w-4 text-zinc-700" />
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-950 flex items-center justify-center shrink-0">
+              <Zap className="h-5 w-5" />
+            </div>
             <div>
-              <span className="text-xs font-semibold text-zinc-950 block">Admin Console</span>
-              <span className="text-[10px] text-zinc-400 font-mono">Cost Centers & Supply</span>
+              <span className="text-xs font-bold text-zinc-950 block">Bulk Batch Runs</span>
+              <span className="text-[11px] text-zinc-500">Spreadsheet CSV payouts</span>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
+          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-950 transition-colors" />
         </Link>
 
         <Link
           href="/history"
-          className="p-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors shadow-xs flex items-center justify-between group"
+          className="p-5 rounded-2xl border border-zinc-200 bg-white hover:border-zinc-300 transition-all shadow-xs flex items-center justify-between group card-hover-subtle"
         >
-          <div className="flex items-center gap-2.5">
-            <History className="h-4 w-4 text-zinc-700" />
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-950 flex items-center justify-center shrink-0">
+              <History className="h-5 w-5" />
+            </div>
             <div>
-              <span className="text-xs font-semibold text-zinc-950 block">Double-Entry Ledger</span>
-              <span className="text-[10px] text-zinc-400 font-mono">Audit Statements</span>
+              <span className="text-xs font-bold text-zinc-950 block">Settlement Ledger</span>
+              <span className="text-[11px] text-zinc-500">Double-entry audit trail</span>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
+          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-950 transition-colors" />
         </Link>
 
         <Link
           href="/scanner"
-          className="p-4 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors shadow-xs flex items-center justify-between group"
+          className="p-5 rounded-2xl border border-zinc-200 bg-white hover:border-zinc-300 transition-all shadow-xs flex items-center justify-between group card-hover-subtle"
         >
-          <div className="flex items-center gap-2.5">
-            <CreditCard className="h-4 w-4 text-zinc-700" />
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-950 flex items-center justify-center shrink-0">
+              <CreditCard className="h-5 w-5" />
+            </div>
             <div>
-              <span className="text-xs font-semibold text-zinc-950 block">POS Terminal</span>
-              <span className="text-[10px] text-zinc-400 font-mono">Barcode Scanner</span>
+              <span className="text-xs font-bold text-zinc-950 block">POS Terminal</span>
+              <span className="text-[11px] text-zinc-500">Simulate store redemption</span>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-900 transition-colors" />
+          <ChevronRight className="h-4 w-4 text-zinc-400 group-hover:text-zinc-950 transition-colors" />
         </Link>
       </div>
     </div>
