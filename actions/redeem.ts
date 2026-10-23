@@ -195,6 +195,8 @@ export async function redeemPointsForCard({
     const emailDispatch = await sendGiftCardEmail({
       recipientName: targetName,
       recipientEmail: targetEmail,
+      senderName: isGift ? (existingUser.name || "Loyalty Member") : undefined,
+      giftMessage: isGift ? (giftMessage || null) : null,
       brandName,
       faceValue,
       currency: "USD",

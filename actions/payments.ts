@@ -7,6 +7,7 @@ import {
   stripe,
 } from "@/lib/payments/stripe";
 import { createNotification } from "@/actions/notifications";
+import { sendPointPurchaseReceiptEmail } from "@/lib/email/giftcardDelivery";
 import { revalidatePath } from "next/cache";
 
 export async function getPointPacks() {
@@ -116,7 +117,7 @@ export async function confirmPointPackPayment({
     return { updatedUser, ledger };
   });
 
-  // Notify user
+  // Notify user & dispatch receipt email
   try {
     await createNotification({
       userId,
@@ -125,8 +126,18 @@ export async function confirmPointPackPayment({
       type: "EARN",
       link: "/wallet",
     });
+
+    await sendPointPurchaseReceiptEmail({
+      customerName: result.updatedUser.name || "Loyalty Member",
+      customerEmail: result.updatedUser.email,
+      packName: pack.name,
+      pointsAdded: pack.totalPoints,
+      amountFormatted: pack.priceFormatted,
+      paymentIntentId,
+      newBalance: result.updatedUser.pointBalance,
+    });
   } catch (err) {
-    // Non-blocking notification failure
+    // Non-blocking notification or email failure
   }
 
   revalidatePath("/");
@@ -177,3 +188,4 @@ export async function initiateSplitTenderPayment({
     isSimulated: intent.isSimulated,
   };
 }
+

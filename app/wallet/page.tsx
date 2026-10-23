@@ -17,12 +17,14 @@ import {
   Download,
   Filter,
   Building2,
-  CreditCard
+  CreditCard,
+  Mail
 } from "lucide-react";
 import Link from "next/link";
 import { formatPoints } from "@/lib/utils";
 import MobilePassModal from "@/components/MobilePassModal";
 import { BuyPointsModal } from "@/components/BuyPointsModal";
+import { EmailPreviewModal } from "@/components/EmailPreviewModal";
 
 type FilterTab = "ALL" | "ACTIVE" | "PARTIAL" | "PERSONAL" | "GIFT";
 
@@ -33,6 +35,7 @@ export default function WalletPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedPassCard, setSelectedPassCard] = useState<any | null>(null);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+  const [emailModalCard, setEmailModalCard] = useState<any | null>(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -419,21 +422,32 @@ export default function WalletPage() {
                       </a>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2 font-mono">
+                    <div className="grid grid-cols-3 gap-1.5 font-mono">
                       <Link
                         href={`/wallet/print/${card.id}`}
-                        className="py-1.5 px-2.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                        className="py-1.5 px-2 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                        title="Print Physical Voucher / PDF"
                       >
                         <Printer className="h-3.5 w-3.5 text-zinc-400" />
-                        <span>Print / PDF</span>
+                        <span>Print</span>
                       </Link>
 
                       <button
                         onClick={() => setSelectedPassCard(card)}
-                        className="py-1.5 px-2.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                        className="py-1.5 px-2 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                        title="Save to Apple Wallet / Google Pay"
                       >
                         <Smartphone className="h-3.5 w-3.5 text-zinc-400" />
-                        <span>Mobile Pass</span>
+                        <span>Pass</span>
+                      </button>
+
+                      <button
+                        onClick={() => setEmailModalCard(card)}
+                        className="py-1.5 px-2 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                        title="Preview & Resend Transactional Email"
+                      >
+                        <Mail className="h-3.5 w-3.5 text-zinc-400" />
+                        <span>Email</span>
                       </button>
                     </div>
                   </div>
@@ -460,6 +474,17 @@ export default function WalletPage() {
         onClose={() => setIsBuyModalOpen(false)}
         onSuccess={() => fetchCards()}
       />
+
+      {/* Transactional Email Preview & Resend Modal */}
+      {emailModalCard && (
+        <EmailPreviewModal
+          orderId={emailModalCard.id}
+          isOpen={!!emailModalCard}
+          onClose={() => setEmailModalCard(null)}
+          defaultEmail={emailModalCard.recipientEmail || currentUser?.email || ""}
+          brandName={emailModalCard.brandName}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { encryptSensitiveData, decryptSensitiveData } from "@/lib/security/crypt
 import { checkRedemptionVelocity } from "@/lib/security/rateLimit";
 import { fulfillGiftCardOrder } from "@/lib/giftcards/router";
 import { getUserTier } from "@/lib/loyalty/tiers";
-import { generateGiftCardEmailHtml } from "@/lib/email/giftcardDelivery";
+import { generateGiftCardEmailHtml, sendGiftCardEmail, sendPointPurchaseReceiptEmail } from "@/lib/email/giftcardDelivery";
 import { executeBulkRewards } from "@/actions/bulkRewards";
 import { convertUsdToCurrency, convertCurrencyToUsd } from "@/lib/currency/fx";
 import { initiatePointPackPurchase, confirmPointPackPayment } from "@/actions/payments";
@@ -312,6 +312,46 @@ export async function GET() {
         milestone: "Stripe Payment Intent & Point Pack Purchase",
         status: "FAILED",
         details: `Payment test failed: ${e.message}`,
+      });
+    }
+
+    // Transactional Email Delivery Engine Milestone
+    try {
+      const emailTest = await sendGiftCardEmail({
+        recipientName: "Devin Recipient",
+        recipientEmail: "devin.test@loyaltyrewards.io",
+        brandName: "Amazon",
+        faceValue: 50,
+        currency: "USD",
+        cardCode: "AMZN-TEST-8899-2211",
+        cardPin: "4421",
+        claimUrl: "https://testflight.tremendous.com/rewards/p/sample-token",
+        orderId: "ORD-VERIFY-EMAIL",
+        remainingPoints: 12500,
+        giftMessage: "Congratulations on the performance milestone!",
+        senderName: "Acme Corp Operations",
+      });
+
+      const receiptTest = await sendPointPurchaseReceiptEmail({
+        customerName: "Alex Member",
+        customerEmail: "alex.demo@loyaltyrewards.io",
+        packName: "Value Growth Pack",
+        pointsAdded: 5500,
+        amountFormatted: "$50.00",
+        paymentIntentId: "pi_verify_test_123",
+        newBalance: 18000,
+      });
+
+      results.milestoneChecks.push({
+        milestone: "Transactional Email Delivery Engine",
+        status: emailTest.success && receiptTest.success ? "PASSED" : "FAILED",
+        details: `Dispatched voucher and tax receipt templates via Resend service (Voucher size: ${emailTest.html.length} chars, Receipt size: ${receiptTest.html.length} chars).`,
+      });
+    } catch (e: any) {
+      results.milestoneChecks.push({
+        milestone: "Transactional Email Delivery Engine",
+        status: "FAILED",
+        details: `Email dispatch test failed: ${e.message}`,
       });
     }
 

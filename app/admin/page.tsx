@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getAdminMetrics, toggleBrandStatus, adjustUserPoints } from "@/actions/admin";
 import { populateSampleData, resetDemoData } from "@/actions/demoData";
+import { fetchEmailAuditLogs } from "@/actions/email";
 import { formatPoints, formatCurrency } from "@/lib/utils";
 import { 
   ShieldCheck, 
@@ -14,7 +15,8 @@ import {
   Server,
   Radio,
   Send,
-  Code
+  Code,
+  Mail
 } from "lucide-react";
 import { useUser } from "@/components/UserContext";
 
@@ -36,11 +38,18 @@ export default function AdminPage() {
   const [webhookDispatching, setWebhookDispatching] = useState(false);
   const [webhookResult, setWebhookResult] = useState<{ status: number; data: any; timestamp: string } | null>(null);
 
+  // Email Audit Logs state
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+
   const loadMetrics = async () => {
     try {
       setLoading(true);
-      const data = await getAdminMetrics();
+      const [data, logs] = await Promise.all([
+        getAdminMetrics(),
+        fetchEmailAuditLogs(),
+      ]);
       setMetrics(data);
+      setEmailLogs(logs);
       if (data.users.length > 0 && !selectedUserId) {
         setSelectedUserId(data.users[0].id);
       }
@@ -605,6 +614,78 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Transactional Email Audit Trail */}
+      <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-zinc-950" />
+            <h2 className="text-sm font-semibold text-zinc-950">Transactional Email Delivery Trail</h2>
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-zinc-200 bg-zinc-50 text-zinc-600">
+              Resend / DKIM Service
+            </span>
+          </div>
+
+          <button
+            onClick={async () => {
+              const logs = await fetchEmailAuditLogs();
+              setEmailLogs(logs);
+            }}
+            className="text-xs font-mono text-zinc-500 hover:text-zinc-950 flex items-center gap-1 transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            <span>Refresh Logs</span>
+          </button>
+        </div>
+
+        {emailLogs.length === 0 ? (
+          <div className="text-center py-6 text-xs text-zinc-400 font-mono">
+            No emails dispatched in this session yet. Redeem a voucher or purchase points to trigger delivery logs.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead>
+                <tr className="border-b border-zinc-100 text-[10px] uppercase text-zinc-400">
+                  <th className="pb-2 font-medium">Message ID</th>
+                  <th className="pb-2 font-medium">Recipient</th>
+                  <th className="pb-2 font-medium">Subject</th>
+                  <th className="pb-2 font-medium">Engine</th>
+                  <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium text-right">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {emailLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-zinc-50/80 transition-colors">
+                    <td className="py-2.5 font-medium text-zinc-900">{log.id}</td>
+                    <td className="py-2.5 text-zinc-700">{log.to}</td>
+                    <td className="py-2.5 text-zinc-600 truncate max-w-xs">{log.subject}</td>
+                    <td className="py-2.5">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] border border-zinc-200 bg-zinc-50 text-zinc-600">
+                        {log.isSimulated ? "Simulator" : "Live Resend"}
+                      </span>
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                        log.status === "DELIVERED" || log.status === "SIMULATED"
+                          ? "text-zinc-950"
+                          : "text-zinc-400"
+                      }`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-900" />
+                        {log.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right text-zinc-400 text-[11px]">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
