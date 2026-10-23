@@ -15,6 +15,7 @@ import {
   toggleScheduleStatus, 
   triggerAutomationExecution 
 } from "@/actions/automations";
+import { fetchPromotionsData } from "@/actions/promotions";
 import { 
   Building2, 
   Briefcase, 
@@ -46,6 +47,7 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
   const [resolvingApprovalId, setResolvingApprovalId] = useState<string | null>(null);
   const [executingSchedId, setExecutingSchedId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ message: string; isError?: boolean } | null>(null);
+  const [activeBanner, setActiveBanner] = useState<any | null>(null);
 
   const balance = currentUser?.pointBalance ?? 0;
   const dollarEquivalent = pointsToDollars(balance);
@@ -53,14 +55,17 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
   const loadCorporateData = async () => {
     try {
       setLoading(true);
-      const [budgetData, approvalData, automationsData] = await Promise.all([
+      const [budgetData, approvalData, automationsData, promosData] = await Promise.all([
         fetchEnterpriseBudgets(),
         fetchPendingApprovals(),
         fetchAutomations(),
+        fetchPromotionsData(),
       ]);
       setBudgets(budgetData);
       setApprovals(approvalData);
       setSchedules(automationsData.schedules);
+      const b = promosData.banners.find((x) => x.isActive && (x.targetAudience === "CORPORATE" || x.targetAudience === "ALL"));
+      if (b) setActiveBanner(b);
     } catch (err: any) {
       console.error("Failed to load corporate dashboard:", err);
     } finally {
@@ -285,6 +290,36 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
           </Link>
         </div>
       </div>
+
+      {/* Dynamic Corporate Merchandising Banner (Admin Managed) */}
+      {activeBanner && (
+        <div className="bg-white rounded-2xl p-6 border border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-5 shadow-xs">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-100 text-zinc-800 border border-zinc-200 font-medium">
+                {activeBanner.badge}
+              </span>
+              <span className="text-[11px] font-mono text-zinc-500">Corporate Campaign</span>
+            </div>
+            <h3 className="text-base font-bold tracking-tight text-zinc-950">
+              {activeBanner.title}
+            </h3>
+            <p className="text-xs text-zinc-600 leading-relaxed">
+              {activeBanner.subtitle}
+            </p>
+          </div>
+
+          <div className="shrink-0">
+            <Link
+              href={activeBanner.ctaLink}
+              className="py-2.5 px-4 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs"
+            >
+              <span>{activeBanner.ctaText}</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Department Cost Center Budgets Grid */}
       <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">

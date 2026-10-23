@@ -30,6 +30,8 @@ interface ClaimSuccessModalProps {
     pointsSpent?: number;
     cashSpent?: number;
     paymentMethod?: string | null;
+    couponApplied?: string | null;
+    bonusPointsEarned?: number;
   };
   onClose: () => void;
 }
@@ -84,6 +86,11 @@ export default function ClaimSuccessModal({ orderData, onClose }: ClaimSuccessMo
                   Split-Tender: {orderData.pointsSpent} pts + ${orderData.cashSpent.toFixed(2)} Card
                 </span>
               ) : null}
+              {orderData.couponApplied && (
+                <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-zinc-100 text-[10px] font-mono uppercase">
+                  Coupon: {orderData.couponApplied} {orderData.bonusPointsEarned ? `(+${orderData.bonusPointsEarned.toLocaleString()} bonus pts)` : ""}
+                </span>
+              )}
               {orderData.failoverTriggered && (
                 <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-200 text-[10px] font-mono uppercase flex items-center gap-1">
                   <Zap className="h-3 w-3" /> Auto-Failover

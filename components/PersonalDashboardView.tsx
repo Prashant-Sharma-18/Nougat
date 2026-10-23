@@ -26,6 +26,7 @@ import EarnSimulatorModal from "./EarnSimulatorModal";
 import { BuyPointsModal } from "./BuyPointsModal";
 import RedemptionModal from "./RedemptionModal";
 import ClaimSuccessModal from "./ClaimSuccessModal";
+import { fetchPromotionsData } from "@/actions/promotions";
 
 interface BrandItem {
   id: string;
@@ -48,10 +49,24 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
   const [successOrderData, setSuccessOrderData] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [activeBanner, setActiveBanner] = useState<any | null>(null);
 
   const balance = currentUser?.pointBalance ?? 0;
   const dollarEquivalent = pointsToDollars(balance);
   const userTier = getUserTier(balance);
+
+  useEffect(() => {
+    async function loadBanner() {
+      try {
+        const promos = await fetchPromotionsData();
+        const banner = promos.banners.find((b) => b.isActive && (b.targetAudience === "PERSONAL" || b.targetAudience === "ALL"));
+        if (banner) setActiveBanner(banner);
+      } catch (e) {
+        // Non-blocking banner fetch
+      }
+    }
+    loadBanner();
+  }, []);
 
   // Categories for personal consumer shopping
   const categories = [
@@ -176,6 +191,36 @@ export default function PersonalDashboardView({ initialBrands }: { initialBrands
           </div>
         </div>
       </div>
+
+      {/* Dynamic Merchandising Hero Banner (Admin Managed) */}
+      {activeBanner && (
+        <div className="bg-zinc-950 rounded-2xl p-6 text-white border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-5 shadow-xs">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-200 border border-zinc-700">
+                {activeBanner.badge}
+              </span>
+              <span className="text-[11px] font-mono text-zinc-400">Active Promotion</span>
+            </div>
+            <h2 className="text-lg font-bold tracking-tight text-white">
+              {activeBanner.title}
+            </h2>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              {activeBanner.subtitle}
+            </p>
+          </div>
+
+          <div className="shrink-0">
+            <Link
+              href={activeBanner.ctaLink}
+              className="py-2.5 px-4 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs"
+            >
+              <span>{activeBanner.ctaText}</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Personal Navigation Quick-Links Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

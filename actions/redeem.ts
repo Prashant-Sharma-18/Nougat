@@ -8,6 +8,7 @@ import { consumeVerificationToken, HIGH_VALUE_REDEMPTION_THRESHOLD } from "@/lib
 import { getUserTier } from "@/lib/loyalty/tiers";
 import { sendGiftCardEmail } from "@/lib/email/giftcardDelivery";
 import { createNotification } from "@/actions/notifications";
+import { validateAndApplyCoupon } from "@/lib/admin/promotions";
 import { revalidatePath } from "next/cache";
 
 export async function redeemPointsForCard({
@@ -28,6 +29,7 @@ export async function redeemPointsForCard({
   otpVerificationToken,
   bypass2Fa = false,
   skipVelocityCheck = false,
+  appliedCouponCode,
 }: {
   userId: string;
   brandId: string;
@@ -46,6 +48,7 @@ export async function redeemPointsForCard({
   otpVerificationToken?: string;
   bypass2Fa?: boolean;
   skipVelocityCheck?: boolean;
+  appliedCouponCode?: string;
 }) {
   const POINTS_PER_DOLLAR = 100;
   let pointsRequired = Math.round(faceValue * POINTS_PER_DOLLAR);
@@ -72,6 +75,18 @@ export async function redeemPointsForCard({
   if (tierInfo.discountPercentage > 0) {
     const discount = Math.round((pointsRequired * tierInfo.discountPercentage) / 100);
     pointsRequired = Math.max(100, pointsRequired - discount);
+  }
+
+  // Apply promotional coupon discount (e.g. SAVE10 10% off, CORP20)
+  let couponDiscountPts = 0;
+  let couponBonusPts = 0;
+  if (appliedCouponCode) {
+    const couponValidation = validateAndApplyCoupon(appliedCouponCode, faceValue);
+    if (couponValidation.valid) {
+      couponDiscountPts = Math.round(couponValidation.discountDollars * POINTS_PER_DOLLAR);
+      couponBonusPts = couponValidation.bonusPoints;
+      pointsRequired = Math.max(100, pointsRequired - couponDiscountPts);
+    }
   }
 
   // Split-Tender logic (Points + Cash Top-up)
@@ -234,6 +249,27 @@ export async function redeemPointsForCard({
       remainingPoints: result.user.pointBalance,
     });
 
+    // 4b. Credit promotional coupon bonus points if coupon granted bonus points
+    let finalUserBalance = result.user.pointBalance;
+    if (couponBonusPts > 0) {
+      const bonusRes = await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: { pointBalance: { increment: couponBonusPts } },
+        }),
+        prisma.pointLedger.create({
+          data: {
+            userId,
+            amount: couponBonusPts,
+            type: "EARNED",
+            description: `Coupon Bonus: +${couponBonusPts} pts from promotional code ${appliedCouponCode?.toUpperCase()}`,
+            referenceId: completedOrder.id,
+          },
+        }),
+      ]);
+      finalUserBalance = bonusRes[0].pointBalance;
+    }
+
     // 5. Create in-app notification
     try {
       await createNotification({
@@ -241,7 +277,7 @@ export async function redeemPointsForCard({
         title: isGift ? "Gift Card Dispatched" : "Gift Card Ready",
         message: isGift
           ? `Dispatched $${faceValue} ${brandName} gift card to ${targetName} (${targetEmail}).`
-          : `Your $${faceValue} ${brandName} voucher is now active in your wallet${finalCashSpent > 0 ? ` (Paid ${finalPointsSpent} pts + $${finalCashSpent.toFixed(2)})` : ""}.`,
+          : `Your $${faceValue} ${brandName} voucher is now active in your wallet${finalCashSpent > 0 ? ` (Paid ${finalPointsSpent} pts + $${finalCashSpent.toFixed(2)})` : ""}.${couponBonusPts > 0 ? ` (+${couponBonusPts.toLocaleString()} bonus pts credited!)` : ""}`,
         type: "ORDER",
         link: "/wallet",
       });
@@ -270,9 +306,11 @@ export async function redeemPointsForCard({
       recipientName: targetName,
       recipientEmail: targetEmail,
       giftMessage: giftMessage || null,
-      remainingBalance: result.user.pointBalance,
+      remainingBalance: finalUserBalance,
       emailPreviewHtml: emailDispatch.html,
       tierApplied: tierInfo.displayName,
+      couponApplied: appliedCouponCode ? appliedCouponCode.toUpperCase() : null,
+      bonusPointsEarned: couponBonusPts,
     };
   } catch (err: any) {
     // 6. Safe Rollback: refund points if all providers fail

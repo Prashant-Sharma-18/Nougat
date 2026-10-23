@@ -7,6 +7,7 @@ import { initiateSplitTenderPayment } from "@/actions/payments";
 import { requestRedemptionOtp } from "@/actions/otp";
 import { formatPoints, dollarsToPoints } from "@/lib/utils";
 import { OtpVerificationModal } from "./OtpVerificationModal";
+import { validateCouponAction } from "@/actions/promotions";
 import { 
   X, 
   AlertTriangle, 
@@ -15,7 +16,10 @@ import {
   ArrowRight,
   CreditCard,
   Lock,
-  Gift
+  Gift,
+  Tag,
+  Check,
+  Percent
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { formatWithFx } from "@/lib/currency/fx";
@@ -68,12 +72,59 @@ export default function RedemptionModal({
   } | null>(null);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
+  // Promotional coupon state
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountPercentage: number;
+    bonusPoints: number;
+    discountDollars: number;
+    message: string;
+  } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponFeedback, setCouponFeedback] = useState<{ message: string; isError?: boolean } | null>(null);
+
   if (!isOpen || !currentUser) return null;
 
-  const pointsRequired = dollarsToPoints(selectedDenomination);
+  const basePointsRequired = dollarsToPoints(selectedDenomination);
+  const couponDiscountPts = appliedCoupon ? appliedCoupon.discountDollars * 100 : 0;
+  const pointsRequired = Math.max(100, basePointsRequired - couponDiscountPts);
   const userBalance = currentUser.pointBalance;
   const hasEnoughPoints = userBalance >= pointsRequired;
   const remainingPoints = userBalance - pointsRequired;
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponCodeInput.trim()) return;
+
+    try {
+      setCouponLoading(true);
+      setCouponFeedback(null);
+      const res = await validateCouponAction(couponCodeInput, selectedDenomination);
+      if (res.valid) {
+        setAppliedCoupon({
+          code: couponCodeInput.trim().toUpperCase(),
+          discountPercentage: res.discountPercentage,
+          bonusPoints: res.bonusPoints,
+          discountDollars: res.discountDollars,
+          message: res.message,
+        });
+        setCouponFeedback({ message: res.message });
+      } else {
+        setCouponFeedback({ message: res.message, isError: true });
+      }
+    } catch (e: any) {
+      setCouponFeedback({ message: e.message || "Failed to validate coupon.", isError: true });
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCodeInput("");
+    setCouponFeedback(null);
+  };
 
   // Split-Tender (Points + Cash Top-up)
   const [useSplitTender, setUseSplitTender] = useState(false);
@@ -156,6 +207,7 @@ export default function RedemptionModal({
         paymentIntentId,
         otpChallengeId,
         otpVerificationToken: otpToken,
+        appliedCouponCode: appliedCoupon?.code,
       });
 
       // Confetti burst
@@ -261,6 +313,77 @@ export default function RedemptionModal({
             </div>
           </div>
 
+          {/* Promotional Coupon Code Input */}
+          <div className="p-3.5 rounded-xl border border-zinc-200 bg-zinc-50/60 space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="font-semibold text-zinc-900 flex items-center gap-1.5 font-sans">
+                <Tag className="h-3.5 w-3.5 text-zinc-700" />
+                <span>Promotional Discount Coupon</span>
+              </span>
+              {appliedCoupon && (
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-zinc-950 text-white font-medium">
+                  {appliedCoupon.code} Applied
+                </span>
+              )}
+            </div>
+
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-zinc-200 text-xs font-mono">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 font-bold text-zinc-950">
+                    <Check className="h-3.5 w-3.5 text-zinc-900" />
+                    <span>{appliedCoupon.code}</span>
+                    <span className="text-zinc-500 font-normal">
+                      ({appliedCoupon.discountPercentage > 0 ? `${appliedCoupon.discountPercentage}% Discount` : "Bonus Applied"})
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-zinc-500 font-sans">
+                    Saved {appliedCoupon.discountDollars * 100} points (${appliedCoupon.discountDollars.toFixed(2)})
+                    {appliedCoupon.bonusPoints > 0 ? ` + ${appliedCoupon.bonusPoints.toLocaleString()} bonus pts` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="px-2 py-1 rounded text-[11px] font-sans text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. SAVE10 or CORP20"
+                  value={couponCodeInput}
+                  onChange={(e) => {
+                    setCouponCodeInput(e.target.value.toUpperCase());
+                    setCouponFeedback(null);
+                  }}
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-mono uppercase text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-400"
+                />
+                <button
+                  type="submit"
+                  disabled={couponLoading || !couponCodeInput.trim()}
+                  className="px-3.5 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-medium font-sans transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {couponLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                  <span>Apply</span>
+                </button>
+              </form>
+            )}
+
+            {couponFeedback && (
+              <p
+                className={`text-[11px] font-mono ${
+                  couponFeedback.isError ? "text-zinc-700 font-medium" : "text-zinc-900 font-semibold"
+                }`}
+              >
+                {couponFeedback.message}
+              </p>
+            )}
+          </div>
+
           {/* Points Breakdown Box */}
           <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2 text-xs font-mono">
             <div className="flex justify-between items-center text-zinc-600">
@@ -269,12 +392,42 @@ export default function RedemptionModal({
                 {formatPoints(userBalance)} pts
               </span>
             </div>
-            <div className="flex justify-between items-center text-zinc-600">
-              <span>Points Required for ${selectedDenomination}:</span>
-              <span className="font-semibold text-zinc-950">
-                -{formatPoints(pointsRequired)} pts
-              </span>
-            </div>
+            {appliedCoupon && couponDiscountPts > 0 ? (
+              <>
+                <div className="flex justify-between items-center text-zinc-600">
+                  <span>Standard Cost (${selectedDenomination}):</span>
+                  <span className="font-mono text-zinc-500 line-through">
+                    {formatPoints(basePointsRequired)} pts
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-zinc-900 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3 w-3" />
+                    <span>Coupon '{appliedCoupon.code}' ({appliedCoupon.discountPercentage}% off):</span>
+                  </span>
+                  <span>-{formatPoints(couponDiscountPts)} pts</span>
+                </div>
+                <div className="flex justify-between items-center text-zinc-600">
+                  <span>Final Points Required:</span>
+                  <span className="font-semibold text-zinc-950">
+                    -{formatPoints(pointsRequired)} pts
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between items-center text-zinc-600">
+                <span>Points Required for ${selectedDenomination}:</span>
+                <span className="font-semibold text-zinc-950">
+                  -{formatPoints(pointsRequired)} pts
+                </span>
+              </div>
+            )}
+            {appliedCoupon && appliedCoupon.bonusPoints > 0 && (
+              <div className="flex justify-between items-center text-zinc-900 font-bold bg-zinc-100 p-1.5 rounded">
+                <span>Bonus Loyalty Points:</span>
+                <span>+{appliedCoupon.bonusPoints.toLocaleString()} pts</span>
+              </div>
+            )}
             <div className="border-t border-zinc-200 pt-2 flex justify-between items-center">
               <span className="font-semibold text-zinc-950">Remaining Balance:</span>
               <span
