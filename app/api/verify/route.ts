@@ -11,6 +11,7 @@ import { getUserTier } from "@/lib/loyalty/tiers";
 import { generateGiftCardEmailHtml } from "@/lib/email/giftcardDelivery";
 import { executeBulkRewards } from "@/actions/bulkRewards";
 import { convertUsdToCurrency, convertCurrencyToUsd } from "@/lib/currency/fx";
+import { initiatePointPackPurchase, confirmPointPackPayment } from "@/actions/payments";
 
 export async function GET() {
   try {
@@ -288,6 +289,31 @@ export async function GET() {
       status: "PASSED",
       details: `User has ${ledgerCount} immutable audit ledger transactions recorded.`,
     });
+
+    // Payment Intent & Point Pack Purchase Milestone
+    try {
+      const topupInit = await initiatePointPackPurchase({
+        userId: user.id,
+        packId: "pack_value",
+      });
+      const topupConfirm = await confirmPointPackPayment({
+        userId: user.id,
+        paymentIntentId: topupInit.paymentIntentId,
+        packId: "pack_value",
+      });
+
+      results.milestoneChecks.push({
+        milestone: "Stripe Payment Intent & Point Pack Purchase",
+        status: topupConfirm.success ? "PASSED" : "FAILED",
+        details: `Created PaymentIntent ${topupInit.paymentIntentId} for ${topupInit.pack.priceFormatted}. Successfully credited +${topupConfirm.pointsAdded?.toLocaleString()} pts to ledger.`,
+      });
+    } catch (e: any) {
+      results.milestoneChecks.push({
+        milestone: "Stripe Payment Intent & Point Pack Purchase",
+        status: "FAILED",
+        details: `Payment test failed: ${e.message}`,
+      });
+    }
 
     return NextResponse.json({ success: true, verification: results });
   } catch (err: any) {

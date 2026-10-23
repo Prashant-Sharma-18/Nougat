@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useUser } from "./UserContext";
 import { redeemPointsForCard } from "@/actions/redeem";
+import { initiateSplitTenderPayment } from "@/actions/payments";
 import { formatPoints, dollarsToPoints } from "@/lib/utils";
 import { 
   X, 
@@ -91,6 +92,17 @@ export default function RedemptionModal({
       setIsSubmitting(true);
       setErrorMessage(null);
 
+      let paymentIntentId: string | undefined = undefined;
+      if (isSplitTenderActive && cashAmount > 0) {
+        const intentRes = await initiateSplitTenderPayment({
+          userId: currentUser.id,
+          brandId: brand.id,
+          cashAmountInDollars: cashAmount,
+          pointsSpent: pointsToApply,
+        });
+        paymentIntentId = intentRes.paymentIntentId;
+      }
+
       const result = await redeemPointsForCard({
         userId: currentUser.id,
         brandId: brand.id,
@@ -104,6 +116,7 @@ export default function RedemptionModal({
         useSplitTender: isSplitTenderActive,
         cashAmount: isSplitTenderActive ? cashAmount : 0,
         paymentCardMask: isSplitTenderActive ? `Visa •••• ${cardMask.slice(-4)}` : undefined,
+        paymentIntentId,
       });
 
       // Confetti burst

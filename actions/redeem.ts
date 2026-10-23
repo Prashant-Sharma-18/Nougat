@@ -22,6 +22,7 @@ export async function redeemPointsForCard({
   useSplitTender = false,
   cashAmount = 0,
   paymentCardMask,
+  paymentIntentId,
   skipVelocityCheck = false,
 }: {
   userId: string;
@@ -36,6 +37,7 @@ export async function redeemPointsForCard({
   useSplitTender?: boolean;
   cashAmount?: number;
   paymentCardMask?: string;
+  paymentIntentId?: string;
   skipVelocityCheck?: boolean;
 }) {
   const POINTS_PER_DOLLAR = 100;
@@ -74,7 +76,9 @@ export async function redeemPointsForCard({
     finalCashSpent = Math.round(cashAmount * 100) / 100;
     const pointsCoveredByCash = Math.round(finalCashSpent * POINTS_PER_DOLLAR);
     finalPointsSpent = Math.max(0, pointsRequired - pointsCoveredByCash);
-    paymentMethodUsed = paymentCardMask || "Credit Card (Visa •••• 4242)";
+    paymentMethodUsed = paymentIntentId 
+      ? `${paymentCardMask || "Credit Card (Visa •••• 4242)"} [${paymentIntentId}]`
+      : (paymentCardMask || "Credit Card (Visa •••• 4242)");
   }
 
   // 0. Anti-Fraud & Rate Limiting Check (evaluated on points spent)

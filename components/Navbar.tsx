@@ -29,6 +29,7 @@ import EarnSimulatorModal from "./EarnSimulatorModal";
 import NotificationCenter from "./NotificationCenter";
 import CurrencySelector from "./CurrencySelector";
 import { formatWithFx } from "@/lib/currency/fx";
+import { BuyPointsModal } from "./BuyPointsModal";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -44,6 +45,7 @@ export default function Navbar() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
   const [earnModalOpen, setEarnModalOpen] = useState(false);
+  const [buyPointsModalOpen, setBuyPointsModalOpen] = useState(false);
 
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const toolsDropdownRef = useRef<HTMLDivElement>(null);
@@ -246,8 +248,8 @@ export default function Navbar() {
               {/* Notification Center */}
               <NotificationCenter />
 
-              {/* Point Balance Pill */}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg whitespace-nowrap">
+              {/* Point Balance Pill with Direct Top-Up Trigger */}
+              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg whitespace-nowrap">
                 <Coins className="h-3.5 w-3.5 text-zinc-600 shrink-0" />
                 <span className="font-mono text-xs font-semibold text-zinc-950 tabular-nums">
                   {formatPoints(balance)} <span className="text-[10px] text-zinc-400 font-normal">pts</span>
@@ -256,6 +258,14 @@ export default function Navbar() {
                 <span className="font-mono text-xs text-zinc-500 tabular-nums">
                   {formatWithFx(dollarEquivalent, currentCurrency)}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setBuyPointsModalOpen(true)}
+                  title={isEnterprise ? "Buy Corporate Allocation" : "Top Up Points via Card"}
+                  className="ml-0.5 p-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
               </div>
 
               {/* User Switcher Dropdown */}
@@ -479,6 +489,18 @@ export default function Navbar() {
                         </Link>
                       </div>
 
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          setBuyPointsModalOpen(true);
+                        }}
+                        className="w-full py-1.5 px-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-medium transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <CreditCard className="h-3 w-3 text-zinc-300" />
+                        <span>{isEnterprise ? "Buy Corporate Allocation" : "Top Up Points via Card"}</span>
+                      </button>
+
                       <Link
                         href="/marketing"
                         onClick={() => setUserDropdownOpen(false)}
@@ -500,6 +522,12 @@ export default function Navbar() {
       <EarnSimulatorModal
         isOpen={earnModalOpen}
         onClose={() => setEarnModalOpen(false)}
+      />
+
+      {/* Buy Points & Card Top-Up Modal */}
+      <BuyPointsModal
+        isOpen={buyPointsModalOpen}
+        onClose={() => setBuyPointsModalOpen(false)}
       />
     </>
   );

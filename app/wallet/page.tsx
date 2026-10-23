@@ -16,11 +16,13 @@ import {
   Search,
   Download,
   Filter,
-  Building2
+  Building2,
+  CreditCard
 } from "lucide-react";
 import Link from "next/link";
 import { formatPoints } from "@/lib/utils";
 import MobilePassModal from "@/components/MobilePassModal";
+import { BuyPointsModal } from "@/components/BuyPointsModal";
 
 type FilterTab = "ALL" | "ACTIVE" | "PARTIAL" | "PERSONAL" | "GIFT";
 
@@ -30,6 +32,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedPassCard, setSelectedPassCard] = useState<any | null>(null);
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,6 +153,14 @@ export default function WalletPage() {
 
         {/* Action Controls & Total Value Metric */}
         <div className="flex items-center gap-3 shrink-0 font-mono">
+          <button
+            onClick={() => setIsBuyModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-950 bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-medium transition-colors shadow-xs"
+          >
+            <CreditCard className="h-3.5 w-3.5 text-zinc-300" />
+            <span>{isEnterprise ? "Buy Corporate Allocation" : "Top Up Points"}</span>
+          </button>
+
           <button
             onClick={handleExportCsv}
             disabled={exporting || cards.length === 0}
@@ -442,6 +453,13 @@ export default function WalletPage() {
           onClose={() => setSelectedPassCard(null)}
         />
       )}
+
+      {/* Buy Points & Corporate Top-Up Modal */}
+      <BuyPointsModal
+        isOpen={isBuyModalOpen}
+        onClose={() => setIsBuyModalOpen(false)}
+        onSuccess={() => fetchCards()}
+      />
     </div>
   );
 }

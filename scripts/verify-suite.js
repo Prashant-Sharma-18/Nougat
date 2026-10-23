@@ -33,8 +33,8 @@ async function run() {
   console.log('====================================================\n');
 
   try {
-    // 1. Run 12 Milestones
-    console.log('[1/2] Executing 12 Enterprise Milestone Tests (/api/verify)...');
+    // 1. Run Milestones
+    console.log('[1/2] Executing Enterprise Milestone Tests (/api/verify)...');
     const verifyData = await fetchJson(`${BASE_URL}/api/verify`);
     const checks = verifyData?.verification?.milestoneChecks || [];
     
