@@ -71,14 +71,14 @@ export default function Navbar() {
   // Primary navigation links dynamically tailored by Portal Mode
   const primaryLinks = isEnterprise
     ? [
-        { href: "/", label: "Catalog" },
-        { href: "/wallet", label: "Corporate Wallet" },
-        { href: "/bulk-rewards", label: "Bulk Rewards" },
+        { href: "/", label: "Corporate Cockpit" },
+        { href: "/bulk-rewards", label: "Bulk & Automations" },
+        { href: "/admin", label: "Cost Centers & Approvals" },
         { href: "/history", label: "Settlement Ledger" },
       ]
     : [
-        { href: "/", label: "Gift Cards" },
-        { href: "/wallet", label: "My Wallet" },
+        { href: "/", label: "Rewards Catalog" },
+        { href: "/wallet", label: "My Digital Wallet" },
         { href: "/history", label: "Point Activity" },
       ];
 
@@ -406,6 +406,7 @@ export default function Navbar() {
                             key={u.id}
                             onClick={() => {
                               switchUser(u.id);
+                              setPortalMode("GENERAL");
                               setUserDropdownOpen(false);
                             }}
                             className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
@@ -444,6 +445,7 @@ export default function Navbar() {
                             key={u.id}
                             onClick={() => {
                               switchUser(u.id);
+                              setPortalMode("ENTERPRISE");
                               setUserDropdownOpen(false);
                             }}
                             className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
