@@ -22,16 +22,27 @@ import {
   AlertCircle, 
   Loader2, 
   ExternalLink, 
-  Lock,
-  Building2,
-  Gift,
-  Upload,
-  FileSpreadsheet,
-  Check,
-  RotateCcw,
-  Layers,
-  ShieldCheck
+  Lock, 
+  Building2, 
+  Gift, 
+  Upload, 
+  FileSpreadsheet, 
+  Check, 
+  RotateCcw, 
+  Layers, 
+  ShieldCheck,
+  Clock,
+  Play,
+  Pause,
+  Calendar,
+  Zap,
+  History
 } from "lucide-react";
+import { 
+  fetchAutomations, 
+  toggleScheduleStatus, 
+  triggerAutomationExecution 
+} from "@/actions/automations";
 import confetti from "canvas-confetti";
 import Link from "next/link";
 
@@ -205,6 +216,55 @@ export default function BulkRewardsPage() {
   } | null>(null);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
+  // Tab mode & Enterprise Recurring Automations state
+  const [activeTab, setActiveTab] = useState<"MANUAL" | "AUTOMATIONS">("MANUAL");
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [automationLogs, setAutomationLogs] = useState<any[]>([]);
+  const [executingScheduleId, setExecutingScheduleId] = useState<string | null>(null);
+
+  const loadAutomationsData = async () => {
+    try {
+      const data = await fetchAutomations();
+      setSchedules(data.schedules);
+      setAutomationLogs(data.logs);
+    } catch (e) {
+      console.error("Failed to load automations:", e);
+    }
+  };
+
+  const handleToggleSchedule = async (schedId: string, currentStatus: string) => {
+    try {
+      await toggleScheduleStatus(schedId, currentStatus !== "ACTIVE");
+      await loadAutomationsData();
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to update schedule status.");
+    }
+  };
+
+  const handleRunAutomation = async (schedId: string) => {
+    if (!currentUser) return;
+    try {
+      setExecutingScheduleId(schedId);
+      setErrorMessage(null);
+      const res = await triggerAutomationExecution({
+        scheduleId: schedId,
+        adminUserId: currentUser.id,
+      });
+      if (res.success) {
+        setCsvSuccessMessage(
+          `Automation run successful: Dispatched ${res.recipientsProcessed} cards (${res.totalPointsCharged.toLocaleString()} pts charged).`
+        );
+        setTimeout(() => setCsvSuccessMessage(null), 5000);
+      }
+      await loadAutomationsData();
+      await refreshUserData();
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to execute automated schedule.");
+    } finally {
+      setExecutingScheduleId(null);
+    }
+  };
+
   useEffect(() => {
     async function loadBrands() {
       try {
@@ -220,6 +280,7 @@ export default function BulkRewardsPage() {
       }
     }
     loadBrands();
+    loadAutomationsData();
   }, []);
 
   const userBalance = currentUser?.pointBalance ?? 0;
@@ -633,7 +694,218 @@ export default function BulkRewardsPage() {
         </div>
       )}
 
-      {/* Main Grid: Recipients Table + Budget Summary */}
+      {/* Mode Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-zinc-200 pb-3">
+        <button
+          onClick={() => setActiveTab("MANUAL")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            activeTab === "MANUAL"
+              ? "bg-zinc-950 text-white shadow-xs"
+              : "border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700"
+          }`}
+        >
+          <Users className="h-3.5 w-3.5" />
+          <span>Direct Bulk Batch</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("AUTOMATIONS")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            activeTab === "AUTOMATIONS"
+              ? "bg-zinc-950 text-white shadow-xs"
+              : "border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700"
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          <span>Scheduled Recurring Automations</span>
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-200 ml-1">
+            {schedules.filter((s) => s.status === "ACTIVE").length} Active
+          </span>
+        </button>
+      </div>
+
+      {activeTab === "AUTOMATIONS" ? (
+        <div className="space-y-6">
+          {/* Automation Overview Card */}
+          <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-zinc-950" />
+                <h2 className="text-sm font-semibold text-zinc-950">Acme Corp Recurring Reward Engine</h2>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-zinc-200 bg-zinc-50 text-zinc-700">
+                  ORG-8821 Automations
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-1 max-w-xl">
+                Automatic scheduled disbursements linked to department cost centers. Vouchers are fulfilled on schedule and charged to department points budgets.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-mono text-zinc-600">
+              <div>
+                <span className="text-zinc-400 text-[10px] uppercase block">Active Schedules</span>
+                <span className="font-semibold text-zinc-950">
+                  {schedules.filter((s) => s.status === "ACTIVE").length} of {schedules.length}
+                </span>
+              </div>
+              <div className="h-6 w-px bg-zinc-200" />
+              <div>
+                <span className="text-zinc-400 text-[10px] uppercase block">Automated Volume</span>
+                <span className="font-semibold text-zinc-950">
+                  {schedules.reduce((acc, s) => acc + s.totalDisbursedCount, 0)} Vouchers
+                </span>
+              </div>
+              <div className="h-6 w-px bg-zinc-200" />
+              <div>
+                <span className="text-zinc-400 text-[10px] uppercase block">Automated Points</span>
+                <span className="font-semibold text-zinc-950">
+                  {schedules.reduce((acc, s) => acc + s.totalPointsDisbursed, 0).toLocaleString()} pts
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Schedules Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {schedules.map((sched) => (
+              <div
+                key={sched.id}
+                className="bg-white rounded-xl border border-zinc-200 p-4 shadow-xs flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-800 font-medium">
+                      {sched.departmentName.split(" ")[0]} • {sched.frequency}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded ${
+                        sched.status === "ACTIVE"
+                          ? "bg-zinc-950 text-white"
+                          : "border border-zinc-200 bg-zinc-100 text-zinc-500"
+                      }`}
+                    >
+                      {sched.status}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-zinc-950">{sched.name}</h3>
+                    <div className="text-[11px] font-mono text-zinc-600 mt-1">
+                      ${sched.amountPerRecipient}.00 {sched.brandName} • {(sched.amountPerRecipient * 100).toLocaleString()} pts
+                    </div>
+                  </div>
+
+                  {/* Recipients */}
+                  <div className="pt-2 border-t border-zinc-100 space-y-1">
+                    <span className="text-[10px] uppercase font-mono text-zinc-400 block">
+                      Target Recipients ({sched.recipients.length}):
+                    </span>
+                    <div className="space-y-1">
+                      {sched.recipients.map((r: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between text-[11px]">
+                          <span className="font-medium text-zinc-800">{r.name}</span>
+                          <span className="text-zinc-400 font-mono text-[10px]">{r.email}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Schedule Telemetry */}
+                  <div className="pt-2 border-t border-zinc-100 text-[10px] font-mono text-zinc-500 space-y-0.5">
+                    <div>Next Run: {new Date(sched.nextRunAt).toLocaleDateString()}</div>
+                    {sched.lastRunAt && (
+                      <div className="text-zinc-400">
+                        Last Run: {new Date(sched.lastRunAt).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => handleToggleSchedule(sched.id, sched.status)}
+                    className="flex-1 py-1.5 px-3 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors text-center"
+                  >
+                    {sched.status === "ACTIVE" ? "Pause" : "Resume"}
+                  </button>
+
+                  <button
+                    onClick={() => handleRunAutomation(sched.id)}
+                    disabled={executingScheduleId === sched.id}
+                    className="flex-1 py-1.5 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {executingScheduleId === sched.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Zap className="h-3 w-3" />
+                    )}
+                    <span>Run Now</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Execution History Table */}
+          <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-zinc-950" />
+                <h3 className="text-xs font-semibold text-zinc-950">Automated Execution Audit Logs</h3>
+              </div>
+              <button
+                onClick={loadAutomationsData}
+                className="text-xs font-mono text-zinc-500 hover:text-zinc-950 flex items-center gap-1 transition-colors"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Refresh Logs</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-zinc-100 text-[10px] uppercase text-zinc-400">
+                    <th className="pb-2 font-medium">Log ID</th>
+                    <th className="pb-2 font-medium">Schedule Name</th>
+                    <th className="pb-2 font-medium">Recipients</th>
+                    <th className="pb-2 font-medium">Cost Center Charged</th>
+                    <th className="pb-2 font-medium">Status</th>
+                    <th className="pb-2 font-medium text-right">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                  {automationLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-zinc-50/80 transition-colors">
+                      <td className="py-2.5 font-medium text-zinc-900">{log.id}</td>
+                      <td className="py-2.5 text-zinc-800 font-medium font-sans">{log.scheduleName}</td>
+                      <td className="py-2.5 text-zinc-600">{log.recipientsProcessed} cards</td>
+                      <td className="py-2.5">
+                        <span className="font-semibold text-zinc-950">{log.pointsCharged.toLocaleString()} pts</span>
+                      </td>
+                      <td className="py-2.5">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded ${
+                          log.status === "SUCCESS"
+                            ? "bg-zinc-950 text-white"
+                            : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          {log.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right text-zinc-400 text-[11px]">
+                        {new Date(log.executedAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+      /* Main Grid: Recipients Table + Budget Summary */
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Recipients Table */}
         <div className="lg:col-span-2 space-y-4">
@@ -941,6 +1213,7 @@ export default function BulkRewardsPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Batch Completion Results Modal */}
       {batchResults && (

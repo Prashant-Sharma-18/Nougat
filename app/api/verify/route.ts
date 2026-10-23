@@ -19,6 +19,11 @@ import {
   submitApprovalRequest, 
   resolveApprovalRequest 
 } from "@/actions/enterprise";
+import { 
+  fetchAutomations, 
+  toggleScheduleStatus, 
+  triggerAutomationExecution 
+} from "@/actions/automations";
 
 export async function GET() {
   try {
@@ -496,6 +501,50 @@ export async function GET() {
         milestone: "Enterprise Cost Centers & Manager Approval Governance",
         status: "FAILED",
         details: `Enterprise governance test failed: ${e.message}`,
+      });
+    }
+
+    // Scheduled Recurring Reward Automations Milestone
+    try {
+      const automationsData = await fetchAutomations();
+      const engSchedule = automationsData.schedules.find((s) => s.id === "sched_monthly_eng");
+
+      if (!engSchedule) {
+        throw new Error("Target automated schedule 'sched_monthly_eng' not found.");
+      }
+
+      // Test status toggle (pause & unpause)
+      await toggleScheduleStatus("sched_monthly_eng", false);
+      await toggleScheduleStatus("sched_monthly_eng", true);
+
+      // Ensure balance for 3 recipients * 5000 pts ($50 Amazon) = 15,000 pts
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { pointBalance: { increment: 20000 } },
+      });
+
+      const autoResult = await triggerAutomationExecution({
+        scheduleId: "sched_monthly_eng",
+        adminUserId: user.id,
+      });
+
+      const passed =
+        autoResult.success &&
+        autoResult.recipientsProcessed === 3 &&
+        autoResult.orderIds.length === 3 &&
+        autoResult.totalPointsCharged === 15000 &&
+        autoResult.log.status === "SUCCESS";
+
+      results.milestoneChecks.push({
+        milestone: "Scheduled Recurring Reward Automations",
+        status: passed ? "PASSED" : "FAILED",
+        details: `Verified Acme Corp ORG-8821 automated recurring disburser ('${engSchedule.name}'), fulfilled 3 vouchers without manual intervention (${autoResult.totalPointsCharged.toLocaleString()} pts charged to ENG-401), and created audit log #${autoResult.log.id}.`,
+      });
+    } catch (e: any) {
+      results.milestoneChecks.push({
+        milestone: "Scheduled Recurring Reward Automations",
+        status: "FAILED",
+        details: `Automations test error: ${e.message}`,
       });
     }
 
