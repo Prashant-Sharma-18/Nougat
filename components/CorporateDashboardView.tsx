@@ -257,6 +257,35 @@ export default function CorporateDashboardView({ initialBrands }: { initialBrand
         </div>
       </div>
 
+      {/* Featured Banner: Team Directory & Team Member Gifting */}
+      <div className="bg-zinc-950 rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5 border border-zinc-800">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-200 border border-zinc-700">
+              Team Member Gifting
+            </span>
+            <span className="text-[11px] font-mono text-zinc-400">Acme Corp Workforce Roster</span>
+          </div>
+          <h2 className="text-lg font-bold tracking-tight text-white">
+            Send Gift Cards Directly to Listed Team Members
+          </h2>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Choose any colleague from your company team directory, select from active merchant brands, include a personalized recognition message, and disburse instantly from your department cost center.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2.5 shrink-0">
+          <Link
+            href="/corporate/team"
+            className="py-2.5 px-4 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs"
+          >
+            <Users className="h-4 w-4" />
+            <span>Open Team Directory & Gifting</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+
       {/* Department Cost Center Budgets Grid */}
       <div className="bg-white rounded-xl border border-zinc-200 p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">

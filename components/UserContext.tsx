@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { getUsers, getOrCreateDefaultUser } from "@/actions/users";
 import { CurrencyCode } from "@/lib/currency/fx";
 
-export type PortalMode = "GENERAL" | "ENTERPRISE";
+export type PortalMode = "PERSONAL" | "CORPORATE" | "ADMIN" | "GENERAL" | "ENTERPRISE";
 
 export interface UserProfile {
   id: string;
@@ -21,6 +21,9 @@ interface UserContextType {
   currentCurrency: CurrencyCode;
   portalMode: PortalMode;
   setPortalMode: (mode: PortalMode) => void;
+  isPersonal: boolean;
+  isCorporate: boolean;
+  isAdmin: boolean;
   isEnterprise: boolean;
   setCurrentCurrency: (currency: CurrencyCode) => void;
   switchUser: (userId: string) => void;
@@ -35,7 +38,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentCurrency, setCurrencyState] = useState<CurrencyCode>("USD");
-  const [portalMode, setPortalModeState] = useState<PortalMode>("GENERAL");
+  const [portalMode, setPortalModeState] = useState<PortalMode>("PERSONAL");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -43,16 +46,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (savedCurrency) setCurrencyState(savedCurrency);
 
       const savedMode = localStorage.getItem("loyalty_portal_mode") as PortalMode | null;
-      if (savedMode === "GENERAL" || savedMode === "ENTERPRISE") {
-        setPortalModeState(savedMode);
+      if (savedMode) {
+        if (savedMode === "GENERAL") setPortalModeState("PERSONAL");
+        else if (savedMode === "ENTERPRISE") setPortalModeState("CORPORATE");
+        else setPortalModeState(savedMode);
       }
     }
   }, []);
 
   const setPortalMode = (mode: PortalMode) => {
-    setPortalModeState(mode);
+    const normalized = mode === "GENERAL" ? "PERSONAL" : mode === "ENTERPRISE" ? "CORPORATE" : mode;
+    setPortalModeState(normalized);
     if (typeof window !== "undefined") {
-      localStorage.setItem("loyalty_portal_mode", mode);
+      localStorage.setItem("loyalty_portal_mode", normalized);
     }
   };
 
@@ -81,10 +87,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
         const savedMode = typeof window !== "undefined" ? localStorage.getItem("loyalty_portal_mode") as PortalMode | null : null;
         if (savedMode) {
-          setPortalModeState(savedMode);
+          if (savedMode === "GENERAL") setPortalModeState("PERSONAL");
+          else if (savedMode === "ENTERPRISE") setPortalModeState("CORPORATE");
+          else setPortalModeState(savedMode);
         } else {
           const isEnt = active.role === "ADMIN" || active.email.includes("corp") || active.email.includes("admin");
-          setPortalModeState(isEnt ? "ENTERPRISE" : "GENERAL");
+          setPortalModeState(isEnt ? "CORPORATE" : "PERSONAL");
         }
       }
     } catch (e) {
@@ -103,7 +111,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     if (found) {
       setCurrentUser(found);
       const isEnt = found.role === "ADMIN" || found.email.includes("corp") || found.email.includes("admin");
-      const nextMode: PortalMode = isEnt ? "ENTERPRISE" : "GENERAL";
+      const nextMode: PortalMode = isEnt ? "CORPORATE" : "PERSONAL";
       setPortalModeState(nextMode);
       if (typeof window !== "undefined") {
         localStorage.setItem("loyalty_active_user_id", userId);
@@ -135,6 +143,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isCorporate = portalMode === "CORPORATE" || portalMode === "ENTERPRISE";
+  const isAdmin = portalMode === "ADMIN";
+  const isPersonal = !isCorporate && !isAdmin;
+  const isEnterprise = isCorporate;
+
   return (
     <UserContext.Provider
       value={{
@@ -144,7 +157,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         currentCurrency,
         portalMode,
         setPortalMode,
-        isEnterprise: portalMode === "ENTERPRISE",
+        isPersonal,
+        isCorporate,
+        isAdmin,
+        isEnterprise,
         setCurrentCurrency,
         switchUser,
         refreshUserData,

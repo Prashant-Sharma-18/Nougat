@@ -40,6 +40,9 @@ export default function Navbar() {
     currentCurrency, 
     portalMode, 
     setPortalMode, 
+    isPersonal,
+    isCorporate,
+    isAdmin,
     isEnterprise 
   } = useUser();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -68,40 +71,56 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Primary navigation links dynamically tailored by Portal Mode
-  const primaryLinks = isEnterprise
+  // Primary navigation links dynamically tailored by Portal Mode (Personal, Corporate, Admin)
+  const primaryLinks = isAdmin
+    ? [
+        { href: "/admin", label: "Operations Console" },
+        { href: "/orders", label: "Fulfillment Orders" },
+        { href: "/bulk-rewards", label: "Disbursement Runs" },
+        { href: "/history", label: "Double-Entry Ledger" },
+      ]
+    : isCorporate
     ? [
         { href: "/", label: "Corporate Cockpit" },
+        { href: "/corporate/team", label: "Team Directory" },
         { href: "/bulk-rewards", label: "Bulk & Automations" },
-        { href: "/admin", label: "Cost Centers & Approvals" },
         { href: "/history", label: "Settlement Ledger" },
       ]
     : [
         { href: "/", label: "Rewards Catalog" },
         { href: "/wallet", label: "My Digital Wallet" },
-        { href: "/history", label: "Point Activity" },
+        { href: "/orders", label: "Order History" },
+        { href: "/profile", label: "Member Profile" },
       ];
 
   // Secondary operator / merchant tools
-  const toolsLinks = isEnterprise
+  const toolsLinks = isAdmin
     ? [
-        { href: "/orders", label: "Order Audit Logs", icon: ShieldCheck, desc: "Double-entry fulfillment logs" },
+        { href: "/admin", label: "Discounts & Banners", icon: Sliders, desc: "Coupons, promo banners, and catalog rules" },
+        { href: "/corporate/team", label: "Corporate Team Roster", icon: Users, desc: "Team directories and cost center limits" },
+        { href: "/scanner", label: "Merchant POS Terminal", icon: CreditCard, desc: "Simulate in-store barcode redemptions" },
+        { href: "/marketing", label: "Platform Overview", icon: Globe2, desc: "System specifications and architecture" },
+      ]
+    : isCorporate
+    ? [
+        { href: "/corporate/team", label: "Send Team Gift Cards", icon: Users, desc: "1-click gift card sending to team members" },
+        { href: "/orders", label: "Disbursement Order Logs", icon: ShieldCheck, desc: "Double-entry fulfillment and tracking" },
         { href: "/scanner", label: "Merchant POS Terminal", icon: CreditCard, desc: "Scan and debit card balances" },
-        { href: "/admin", label: "Admin Console", icon: Sliders, desc: "Catalog & circulating supply" },
-        { href: "/marketing", label: "Platform Overview", icon: Globe2, desc: "Architecture & feature specs" },
+        { href: "/admin", label: "Cost Centers & Approvals", icon: Building2, desc: "Department budgets and manager queue" },
       ]
     : [
-        { href: "/orders", label: "Order Receipts", icon: ShieldCheck, desc: "View past redemption receipts" },
-        { href: "/bulk-rewards", label: "Bulk Employee Rewards", icon: Building2, desc: "Switch to corporate disbursements" },
+        { href: "/orders", label: "Order History & Status", icon: ShieldCheck, desc: "Track digital voucher delivery" },
+        { href: "/profile", label: "Tier & Rewards Profile", icon: UserIcon, desc: "View points, tier perks & member pass" },
         { href: "/scanner", label: "POS Terminal Simulator", icon: CreditCard, desc: "Test in-store barcode redemption" },
         { href: "/marketing", label: "Platform Overview", icon: Globe2, desc: "Features, plans & technical specs" },
       ];
 
   const isToolsActive = toolsLinks.some((l) => pathname === l.href);
 
-  // Split users into Consumer and Enterprise groups
+  // Split users into Consumer, Corporate, and Admin groups
   const consumerUsers = users.filter((u) => u.role !== "ADMIN" && !u.email.includes("corp") && !u.email.includes("admin"));
-  const enterpriseUsers = users.filter((u) => u.role === "ADMIN" || u.email.includes("corp") || u.email.includes("admin"));
+  const corporateUsers = users.filter((u) => !u.email.includes("admin") && (u.email.includes("corp") || u.role === "USER" && u.email.includes("acme")));
+  const adminUsers = users.filter((u) => u.role === "ADMIN" || u.email.includes("admin"));
 
   return (
     <>
@@ -113,7 +132,7 @@ export default function Navbar() {
               {/* Clean Horizontal Logo with Mode Badge */}
               <Link href="/" className="flex items-center gap-2.5 group whitespace-nowrap">
                 <div className="h-8 w-8 rounded-lg bg-zinc-950 flex items-center justify-center text-white shrink-0 shadow-xs">
-                  {isEnterprise ? <Building2 className="h-4 w-4" /> : <Gift className="h-4 w-4" />}
+                  {isAdmin ? <Sliders className="h-4 w-4" /> : isCorporate ? <Building2 className="h-4 w-4" /> : <Gift className="h-4 w-4" />}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm tracking-tight text-zinc-950 font-sans">
@@ -121,41 +140,55 @@ export default function Navbar() {
                   </span>
                   <span
                     className={`px-1.5 py-0.5 rounded text-[10px] font-mono uppercase font-semibold ${
-                      isEnterprise
+                      isAdmin
                         ? "bg-zinc-950 text-white border border-zinc-800"
+                        : isCorporate
+                        ? "bg-zinc-900 text-zinc-100 border border-zinc-700"
                         : "bg-zinc-100 text-zinc-700 border border-zinc-200"
                     }`}
                   >
-                    {isEnterprise ? "Enterprise" : "Personal"}
+                    {isAdmin ? "Admin Ops" : isCorporate ? "Corporate" : "Personal"}
                   </span>
                 </div>
               </Link>
 
-              {/* Mode Switcher: Personal vs Enterprise */}
+              {/* 3-Mode Switcher: Personal vs Corporate vs Admin */}
               <div className="hidden sm:flex items-center p-0.5 bg-zinc-100 rounded-lg border border-zinc-200 text-xs">
                 <button
-                  onClick={() => setPortalMode("GENERAL")}
+                  onClick={() => setPortalMode("PERSONAL")}
                   className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-xs whitespace-nowrap ${
-                    !isEnterprise
+                    isPersonal
                       ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-500 hover:text-zinc-900 font-medium"
                   }`}
-                  title="Switch to Personal Consumer Experience"
+                  title="Switch to Personal Consumer Portal"
                 >
                   <UserIcon className="h-3 w-3" />
                   <span>Personal</span>
                 </button>
                 <button
-                  onClick={() => setPortalMode("ENTERPRISE")}
+                  onClick={() => setPortalMode("CORPORATE")}
                   className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-xs whitespace-nowrap ${
-                    isEnterprise
+                    isCorporate
                       ? "bg-zinc-950 text-white font-semibold shadow-xs"
                       : "text-zinc-500 hover:text-zinc-900 font-medium"
                   }`}
-                  title="Switch to Corporate Enterprise Workspace"
+                  title="Switch to Corporate Team Portal"
                 >
                   <Building2 className="h-3 w-3" />
-                  <span>Enterprise</span>
+                  <span>Corporate</span>
+                </button>
+                <button
+                  onClick={() => setPortalMode("ADMIN")}
+                  className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 text-xs whitespace-nowrap ${
+                    isAdmin
+                      ? "bg-zinc-950 text-white font-semibold shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-900 font-medium"
+                  }`}
+                  title="Switch to Super Admin Operations Console"
+                >
+                  <Sliders className="h-3 w-3" />
+                  <span>Admin</span>
                 </button>
               </div>
 
@@ -188,15 +221,15 @@ export default function Navbar() {
                         : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>{isEnterprise ? "Corporate Tools" : "More"}</span>
+                    <span>{isAdmin ? "Admin Console" : isCorporate ? "Corporate Tools" : "More"}</span>
                     <ChevronDown className="h-3 w-3 text-zinc-400" />
                   </button>
 
                   {toolsDropdownOpen && (
                     <div className="absolute left-0 mt-1.5 w-64 bg-white rounded-xl shadow-lg border border-zinc-200 py-1.5 z-50 animate-in fade-in duration-100">
                       <div className="px-3 py-1.5 text-[10px] font-mono uppercase text-zinc-400 border-b border-zinc-100 flex items-center justify-between">
-                        <span>{isEnterprise ? "Enterprise Workspace" : "Member Services"}</span>
-                        <span className="text-[9px] text-zinc-500">{isEnterprise ? "ORG-8821" : "CONSUMER"}</span>
+                        <span>{isAdmin ? "Master Operations" : isCorporate ? "Enterprise Workspace" : "Member Services"}</span>
+                        <span className="text-[9px] text-zinc-500">{isAdmin ? "SUPERADMIN" : isCorporate ? "ORG-8821" : "CONSUMER"}</span>
                       </div>
                       <div className="p-1 space-y-0.5">
                         {toolsLinks.map((tool) => {
@@ -355,19 +388,19 @@ export default function Navbar() {
                       </div>
                     </div>
 
-                    {/* Personal vs Enterprise Mode Switcher in Dropdown */}
+                    {/* 3-Mode Switcher in Dropdown */}
                     <div className="px-3.5 py-2 border-b border-zinc-100 bg-zinc-50/50">
                       <span className="text-[10px] font-mono uppercase text-zinc-400 block mb-1.5">
                         Portal Experience Mode
                       </span>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-3 gap-1">
                         <button
                           onClick={() => {
-                            setPortalMode("GENERAL");
+                            setPortalMode("PERSONAL");
                             setUserDropdownOpen(false);
                           }}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors ${
-                            !isEnterprise
+                          className={`py-1 px-1.5 rounded-lg text-xs font-medium border flex items-center justify-center gap-1 transition-colors ${
+                            isPersonal
                               ? "bg-zinc-950 text-white border-zinc-950 font-semibold"
                               : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100"
                           }`}
@@ -378,17 +411,32 @@ export default function Navbar() {
 
                         <button
                           onClick={() => {
-                            setPortalMode("ENTERPRISE");
+                            setPortalMode("CORPORATE");
                             setUserDropdownOpen(false);
                           }}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors ${
-                            isEnterprise
+                          className={`py-1 px-1.5 rounded-lg text-xs font-medium border flex items-center justify-center gap-1 transition-colors ${
+                            isCorporate
                               ? "bg-zinc-950 text-white border-zinc-950 font-semibold"
                               : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100"
                           }`}
                         >
                           <Building2 className="h-3 w-3" />
-                          <span>Enterprise</span>
+                          <span>Corporate</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setPortalMode("ADMIN");
+                            setUserDropdownOpen(false);
+                          }}
+                          className={`py-1 px-1.5 rounded-lg text-xs font-medium border flex items-center justify-center gap-1 transition-colors ${
+                            isAdmin
+                              ? "bg-zinc-950 text-white border-zinc-950 font-semibold"
+                              : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100"
+                          }`}
+                        >
+                          <Sliders className="h-3 w-3" />
+                          <span>Admin</span>
                         </button>
                       </div>
                     </div>
@@ -406,7 +454,7 @@ export default function Navbar() {
                             key={u.id}
                             onClick={() => {
                               switchUser(u.id);
-                              setPortalMode("GENERAL");
+                              setPortalMode("PERSONAL");
                               setUserDropdownOpen(false);
                             }}
                             className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
@@ -432,20 +480,59 @@ export default function Navbar() {
                       })}
                     </div>
 
-                    {/* Persona Section: Enterprise Accounts */}
+                    {/* Persona Section: Corporate Accounts */}
                     <div className="px-3.5 pt-2 pb-1 text-[10px] font-mono uppercase text-zinc-400 border-t border-zinc-100 mt-1">
-                      Enterprise Workspaces
+                      Corporate Workspaces
                     </div>
 
                     <div className="px-1 space-y-0.5">
-                      {enterpriseUsers.map((u) => {
+                      {corporateUsers.map((u) => {
                         const isCurrent = u.id === currentUser?.id;
                         return (
                           <button
                             key={u.id}
                             onClick={() => {
                               switchUser(u.id);
-                              setPortalMode("ENTERPRISE");
+                              setPortalMode("CORPORATE");
+                              setUserDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
+                              isCurrent
+                                ? "bg-zinc-100 text-zinc-950 font-semibold"
+                                : "text-zinc-700 hover:bg-zinc-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="h-6 w-6 rounded-full bg-zinc-900 text-white flex items-center justify-center font-medium text-[11px]">
+                                {(u.name || "C").charAt(0)}
+                              </div>
+                              <div>
+                                <span className="block leading-tight">{u.name || "Corporate User"}</span>
+                                <span className="text-[10px] text-zinc-400 font-mono">
+                                  Corporate • {formatPoints(u.pointBalance)} pts
+                                </span>
+                              </div>
+                            </div>
+                            {isCurrent && <Check className="h-3.5 w-3.5 text-zinc-950" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Persona Section: Admin Operators */}
+                    <div className="px-3.5 pt-2 pb-1 text-[10px] font-mono uppercase text-zinc-400 border-t border-zinc-100 mt-1">
+                      Platform Super Admins
+                    </div>
+
+                    <div className="px-1 space-y-0.5">
+                      {adminUsers.map((u) => {
+                        const isCurrent = u.id === currentUser?.id;
+                        return (
+                          <button
+                            key={u.id}
+                            onClick={() => {
+                              switchUser(u.id);
+                              setPortalMode("ADMIN");
                               setUserDropdownOpen(false);
                             }}
                             className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
@@ -456,12 +543,12 @@ export default function Navbar() {
                           >
                             <div className="flex items-center gap-2">
                               <div className="h-6 w-6 rounded-full bg-zinc-950 text-white flex items-center justify-center font-medium text-[11px]">
-                                {(u.name || "E").charAt(0)}
+                                {(u.name || "A").charAt(0)}
                               </div>
                               <div>
                                 <span className="block leading-tight">{u.name || "Admin"}</span>
                                 <span className="text-[10px] text-zinc-400 font-mono">
-                                  Enterprise • {formatPoints(u.pointBalance)} pts
+                                  Master Admin • {formatPoints(u.pointBalance)} pts
                                 </span>
                               </div>
                             </div>

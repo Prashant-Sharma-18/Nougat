@@ -24,6 +24,8 @@ import {
   toggleScheduleStatus, 
   triggerAutomationExecution 
 } from "@/actions/automations";
+import { fetchTeamMembers, createTeamMember, sendGiftCardToTeamMember } from "@/actions/team";
+import { listCoupons, validateAndApplyCoupon, listPromoBanners } from "@/lib/admin/promotions";
 
 export async function GET() {
   try {
@@ -545,6 +547,80 @@ export async function GET() {
         milestone: "Scheduled Recurring Reward Automations",
         status: "FAILED",
         details: `Automations test error: ${e.message}`,
+      });
+    }
+
+    // Milestone 18: Multi-Mode Architecture & Promotional Coupons / Team Gifting
+    try {
+      // 1. Corporate Team Directory & Gifting
+      const testMemberEmail = `sam.test.${Date.now()}@acmecorp.internal`;
+      const createdMember = await createTeamMember({
+        name: "Samantha Wright",
+        email: testMemberEmail,
+        departmentId: "dept_eng",
+        departmentName: "Engineering & Cloud Infrastructure",
+        title: "Staff Security Engineer",
+      });
+
+      if (!createdMember.success || !createdMember.member.id) {
+        throw new Error("Failed to create corporate team member.");
+      }
+
+      // Ensure user has points to send a $25 gift card (2,500 pts)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { pointBalance: { increment: 5000 } },
+      });
+
+      const giftRes = await sendGiftCardToTeamMember({
+        memberId: createdMember.member.id,
+        brandId: brand.id,
+        faceValue: 25,
+        giftMessage: "Bravo on patch deployment!",
+        senderUserId: user.id,
+      });
+
+      if (!giftRes.success || !giftRes.orderId) {
+        throw new Error("Failed to send gift card to corporate team member.");
+      }
+
+      // 2. Promotional Discount Coupons & Merchandising Banners
+      const allCoupons = listCoupons();
+      if (allCoupons.length === 0) {
+        throw new Error("No coupons found in promotions store.");
+      }
+
+      const coupon10Result = validateAndApplyCoupon("SAVE10", 50);
+      if (!coupon10Result.valid || coupon10Result.discountPercentage !== 10) {
+        throw new Error("Coupon 'SAVE10' failed validation or discount calculation.");
+      }
+
+      const couponCorpResult = validateAndApplyCoupon("CORP20", 300);
+      if (!couponCorpResult.valid || couponCorpResult.bonusPoints !== 5000) {
+        throw new Error("Coupon 'CORP20' failed validation for bonus points.");
+      }
+
+      const allBanners = listPromoBanners();
+      const hasPersonalBanner = allBanners.some((b) => b.targetAudience === "PERSONAL");
+      const hasCorporateBanner = allBanners.some((b) => b.targetAudience === "CORPORATE");
+
+      const passed =
+        giftRes.success &&
+        coupon10Result.valid &&
+        couponCorpResult.valid &&
+        hasPersonalBanner &&
+        hasCorporateBanner;
+
+      results.milestoneChecks.push({
+        milestone: "Multi-Mode Architecture & Promotional Coupons / Team Gifting",
+        status: passed ? "PASSED" : "FAILED",
+        details: `Verified corporate team member onboarding ('${createdMember.member.name}'), dispatched $25 gift card order #${giftRes.orderId} from cost center ENG-401, validated discount coupons ('SAVE10' 10% discount & 'CORP20' 5,000 bonus pts), and confirmed audience-targeted merchandising banners.`,
+      });
+    } catch (e: any) {
+      results.milestoneChecks.push({
+        milestone: "Multi-Mode Architecture & Promotional Coupons / Team Gifting",
+        status: "FAILED",
+        details: `Multi-mode architecture test failed: ${e.message}`,
       });
     }
 
