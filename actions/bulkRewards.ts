@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redeemPointsForCard } from "@/actions/redeem";
 import { getUserTier } from "@/lib/loyalty/tiers";
 import { SupportedProvider } from "@/lib/giftcards/router";
+import { HIGH_VALUE_BULK_THRESHOLD, consumeVerificationToken } from "@/lib/security/otp";
 import { createNotification } from "@/actions/notifications";
 import { revalidatePath } from "next/cache";
 
@@ -88,16 +89,38 @@ export async function executeBulkRewards({
   preferredProvider = "AUTO_FAILOVER",
   useCorporateCardTopUp = false,
   corporateCardMask,
+  otpChallengeId,
+  otpVerificationToken,
 }: {
   userId: string;
   recipients: BulkRecipientItem[];
   preferredProvider?: SupportedProvider;
   useCorporateCardTopUp?: boolean;
   corporateCardMask?: string;
+  otpChallengeId?: string;
+  otpVerificationToken?: string;
 }) {
   const validation = await validateBulkBatch({ userId, recipients });
   if (!validation.valid) {
     throw new Error(`Validation failed: ${validation.errors.join(", ")}`);
+  }
+
+  // 2FA Security Challenge on high-value corporate batches ($500+)
+  if (validation.totalFaceValue >= HIGH_VALUE_BULK_THRESHOLD) {
+    if (!otpChallengeId || !otpVerificationToken) {
+      throw new Error(
+        `Corporate bulk disbursement ($${validation.totalFaceValue.toFixed(2)}) requires two-factor security authorization (OTP).`
+      );
+    }
+
+    const isAuthorized = consumeVerificationToken({
+      challengeId: otpChallengeId,
+      token: otpVerificationToken,
+    });
+
+    if (!isAuthorized) {
+      throw new Error("Two-factor authorization token is invalid, expired, or already used.");
+    }
   }
 
   if (!validation.canAffordAll && !useCorporateCardTopUp) {
@@ -144,6 +167,7 @@ export async function executeBulkRewards({
         useSplitTender: useSplit,
         cashAmount: cashToCharge,
         paymentCardMask: useSplit ? corporateCardMask || "Corp Card (Mastercard •••• 9012)" : undefined,
+        bypass2Fa: true,
         skipVelocityCheck: true,
       });
 

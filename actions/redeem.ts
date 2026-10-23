@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { fulfillGiftCardOrder, SupportedProvider } from "@/lib/giftcards/router";
 import { encryptSensitiveData } from "@/lib/security/crypto";
 import { checkRedemptionVelocity } from "@/lib/security/rateLimit";
+import { consumeVerificationToken, HIGH_VALUE_REDEMPTION_THRESHOLD } from "@/lib/security/otp";
 import { getUserTier } from "@/lib/loyalty/tiers";
 import { sendGiftCardEmail } from "@/lib/email/giftcardDelivery";
 import { createNotification } from "@/actions/notifications";
@@ -23,6 +24,9 @@ export async function redeemPointsForCard({
   cashAmount = 0,
   paymentCardMask,
   paymentIntentId,
+  otpChallengeId,
+  otpVerificationToken,
+  bypass2Fa = false,
   skipVelocityCheck = false,
 }: {
   userId: string;
@@ -38,6 +42,9 @@ export async function redeemPointsForCard({
   cashAmount?: number;
   paymentCardMask?: string;
   paymentIntentId?: string;
+  otpChallengeId?: string;
+  otpVerificationToken?: string;
+  bypass2Fa?: boolean;
   skipVelocityCheck?: boolean;
 }) {
   const POINTS_PER_DOLLAR = 100;
@@ -86,6 +93,26 @@ export async function redeemPointsForCard({
     const velocityCheck = await checkRedemptionVelocity(userId, finalPointsSpent);
     if (!velocityCheck.allowed) {
       throw new Error(velocityCheck.reason || "Redemption velocity threshold exceeded.");
+    }
+  }
+
+  // 0b. 2FA OTP Security Challenge on High-Value Redemptions ($100+)
+  if (faceValue >= HIGH_VALUE_REDEMPTION_THRESHOLD && !bypass2Fa) {
+    if (!otpChallengeId || !otpVerificationToken) {
+      throw new Error(
+        `High-value redemption ($${faceValue.toFixed(2)}) requires two-factor security verification (OTP).`
+      );
+    }
+
+    const isAuthorized = consumeVerificationToken({
+      challengeId: otpChallengeId,
+      token: otpVerificationToken,
+    });
+
+    if (!isAuthorized) {
+      throw new Error(
+        "Two-factor authorization token is invalid, expired, or has already been used."
+      );
     }
   }
 

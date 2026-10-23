@@ -8,6 +8,8 @@ import {
   exportBulkBatchCsvAction, 
   BulkRecipientItem 
 } from "@/actions/bulkRewards";
+import { requestBulkBatchOtp } from "@/actions/otp";
+import { OtpVerificationModal } from "@/components/OtpVerificationModal";
 import { formatPoints } from "@/lib/utils";
 import { getUserTier } from "@/lib/loyalty/tiers";
 import { 
@@ -193,6 +195,15 @@ export default function BulkRewardsPage() {
   const [batchResults, setBatchResults] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [exportingCsv, setExportingCsv] = useState(false);
+
+  // 2FA Security Challenge state for high-value batches ($500+)
+  const [otpChallenge, setOtpChallenge] = useState<{
+    challengeId: string;
+    expiresAt: number;
+    maskedEmail: string;
+    previewCode?: string;
+  } | null>(null);
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadBrands() {
@@ -419,6 +430,32 @@ export default function BulkRewardsPage() {
       return;
     }
 
+    // High-value corporate bulk batch ($500+) requires 2FA authorization
+    if (totalFaceValue >= 500) {
+      try {
+        setIsSubmitting(true);
+        const challenge = await requestBulkBatchOtp({
+          userId: currentUser.id,
+          totalAmount: totalFaceValue,
+          recipientCount: recipients.length,
+        });
+        setOtpChallenge(challenge);
+        setIsOtpModalOpen(true);
+        return;
+      } catch (err: any) {
+        setErrorMessage(err.message || "Failed to initiate security authorization.");
+        return;
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
+    await executeAuthorizedBatch();
+  };
+
+  const executeAuthorizedBatch = async (otpToken?: string, otpChallengeId?: string) => {
+    if (!currentUser) return;
+
     try {
       setIsSubmitting(true);
       const res = await executeBulkRewards({
@@ -427,11 +464,14 @@ export default function BulkRewardsPage() {
         preferredProvider,
         useCorporateCardTopUp: useCorpCardTopUp,
         corporateCardMask: corpCardMask,
+        otpChallengeId,
+        otpVerificationToken: otpToken,
       });
 
       setBatchResults(res);
       updateUserBalance(userBalance - res.totalPointsSpent);
       refreshUserData();
+      setIsOtpModalOpen(false);
 
       try {
         confetti({
@@ -979,6 +1019,30 @@ export default function BulkRewardsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 2FA OTP Security Challenge Modal for High-Value Bulk Batches */}
+      {otpChallenge && (
+        <OtpVerificationModal
+          isOpen={isOtpModalOpen}
+          onClose={() => setIsOtpModalOpen(false)}
+          onSuccess={(token, challengeId) => {
+            executeAuthorizedBatch(token, challengeId);
+          }}
+          challengeId={otpChallenge.challengeId}
+          maskedEmail={otpChallenge.maskedEmail}
+          transactionSummary={`Corporate Batch: ${recipients.length} rewards ($${totalFaceValue.toFixed(2)} USD)`}
+          previewCode={otpChallenge.previewCode}
+          onResendOtp={async () => {
+            if (!currentUser) return;
+            const fresh = await requestBulkBatchOtp({
+              userId: currentUser.id,
+              totalAmount: totalFaceValue,
+              recipientCount: recipients.length,
+            });
+            setOtpChallenge(fresh);
+          }}
+        />
       )}
     </div>
   );

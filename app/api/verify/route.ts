@@ -12,6 +12,7 @@ import { generateGiftCardEmailHtml, sendGiftCardEmail, sendPointPurchaseReceiptE
 import { executeBulkRewards } from "@/actions/bulkRewards";
 import { convertUsdToCurrency, convertCurrencyToUsd } from "@/lib/currency/fx";
 import { initiatePointPackPurchase, confirmPointPackPayment } from "@/actions/payments";
+import { createOtpChallenge, verifyOtpCode } from "@/lib/security/otp";
 
 export async function GET() {
   try {
@@ -352,6 +353,71 @@ export async function GET() {
         milestone: "Transactional Email Delivery Engine",
         status: "FAILED",
         details: `Email dispatch test failed: ${e.message}`,
+      });
+    }
+
+    // 2FA / OTP High-Value Authorization Milestone
+    try {
+      const challenge = await createOtpChallenge({
+        userId: user.id,
+        email: user.email,
+        purpose: "HIGH_VALUE_REDEMPTION",
+        context: { faceValue: 100, brandName: "Amazon" },
+      });
+
+      const badAttempt = verifyOtpCode({
+        challengeId: challenge.challengeId,
+        code: "999999",
+      });
+
+      const goodAttempt = verifyOtpCode({
+        challengeId: challenge.challengeId,
+        code: challenge.previewCode!,
+      });
+
+      let blockedWithoutToken = false;
+      try {
+        await redeemPointsForCard({
+          userId: user.id,
+          brandId: brand.id,
+          faceValue: 100,
+          skipVelocityCheck: true,
+        });
+      } catch (err: any) {
+        blockedWithoutToken = err.message.toLowerCase().includes("two-factor") || err.message.toLowerCase().includes("otp");
+      }
+
+      // Ensure user has enough balance for test redemption
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { pointBalance: { increment: 15000 } },
+      });
+
+      const authorizedRedemption = await redeemPointsForCard({
+        userId: user.id,
+        brandId: brand.id,
+        faceValue: 100,
+        otpChallengeId: challenge.challengeId,
+        otpVerificationToken: goodAttempt.verificationToken,
+        skipVelocityCheck: true,
+      });
+
+      const passed =
+        !badAttempt.success &&
+        goodAttempt.success &&
+        blockedWithoutToken &&
+        authorizedRedemption.success;
+
+      results.milestoneChecks.push({
+        milestone: "2FA / OTP High-Value Security Guard",
+        status: passed ? "PASSED" : "FAILED",
+        details: `Verified 6-digit challenge ${challenge.challengeId}: invalid code rejected (${badAttempt.remainingAttempts} attempts remaining), unverified $100 order blocked, token authorized redemption #${authorizedRedemption.orderId}.`,
+      });
+    } catch (e: any) {
+      results.milestoneChecks.push({
+        milestone: "2FA / OTP High-Value Security Guard",
+        status: "FAILED",
+        details: `2FA test error: ${e.message}`,
       });
     }
 

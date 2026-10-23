@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import { useUser } from "./UserContext";
 import { redeemPointsForCard } from "@/actions/redeem";
 import { initiateSplitTenderPayment } from "@/actions/payments";
+import { requestRedemptionOtp } from "@/actions/otp";
 import { formatPoints, dollarsToPoints } from "@/lib/utils";
+import { OtpVerificationModal } from "./OtpVerificationModal";
 import { 
   X, 
   AlertTriangle, 
@@ -57,6 +59,15 @@ export default function RedemptionModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 2FA OTP state for high-value redemptions ($100+)
+  const [otpChallenge, setOtpChallenge] = useState<{
+    challengeId: string;
+    expiresAt: number;
+    maskedEmail: string;
+    previewCode?: string;
+  } | null>(null);
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+
   if (!isOpen || !currentUser) return null;
 
   const pointsRequired = dollarsToPoints(selectedDenomination);
@@ -88,6 +99,32 @@ export default function RedemptionModal({
       return;
     }
 
+    // High-value redemption ($100+) triggers 2FA security challenge
+    if (selectedDenomination >= 100) {
+      try {
+        setIsSubmitting(true);
+        setErrorMessage(null);
+        const challenge = await requestRedemptionOtp({
+          userId: currentUser.id,
+          faceValue: selectedDenomination,
+          brandName: brand.name,
+        });
+        setOtpChallenge(challenge);
+        setIsOtpModalOpen(true);
+        return;
+      } catch (err: any) {
+        setErrorMessage(err.message || "Failed to dispatch security verification code.");
+        return;
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
+    // Standard redemptions (< $100) proceed immediately
+    await executeRedemptionOrder();
+  };
+
+  const executeRedemptionOrder = async (otpToken?: string, otpChallengeId?: string) => {
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
@@ -117,6 +154,8 @@ export default function RedemptionModal({
         cashAmount: isSplitTenderActive ? cashAmount : 0,
         paymentCardMask: isSplitTenderActive ? `Visa •••• ${cardMask.slice(-4)}` : undefined,
         paymentIntentId,
+        otpChallengeId,
+        otpVerificationToken: otpToken,
       });
 
       // Confetti burst
@@ -133,6 +172,7 @@ export default function RedemptionModal({
       const pointsDeducted = isSplitTenderActive ? pointsToApply : pointsRequired;
       updateUserBalance(userBalance - pointsDeducted);
       refreshUserData();
+      setIsOtpModalOpen(false);
       onSuccess(result);
     } catch (err: any) {
       setErrorMessage(err.message || "Redemption request failed.");
@@ -502,13 +542,41 @@ export default function RedemptionModal({
               </>
             ) : (
               <>
-                <span>Confirm ${selectedDenomination} Redemption</span>
+                {selectedDenomination >= 100 && <Lock className="h-3.5 w-3.5 text-zinc-400" />}
+                <span>
+                  {selectedDenomination >= 100
+                    ? `Verify 2FA & Redeem $${selectedDenomination}`
+                    : `Confirm $${selectedDenomination} Redemption`}
+                </span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </>
             )}
           </button>
         </div>
       </div>
+
+      {/* 2FA OTP Security Challenge Modal */}
+      {otpChallenge && (
+        <OtpVerificationModal
+          isOpen={isOtpModalOpen}
+          onClose={() => setIsOtpModalOpen(false)}
+          onSuccess={(token, challengeId) => {
+            executeRedemptionOrder(token, challengeId);
+          }}
+          challengeId={otpChallenge.challengeId}
+          maskedEmail={otpChallenge.maskedEmail}
+          transactionSummary={`$${selectedDenomination.toFixed(2)} ${brand.name} Gift Voucher`}
+          previewCode={otpChallenge.previewCode}
+          onResendOtp={async () => {
+            const fresh = await requestRedemptionOtp({
+              userId: currentUser.id,
+              faceValue: selectedDenomination,
+              brandName: brand.name,
+            });
+            setOtpChallenge(fresh);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -103,3 +103,4 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailDispatchR
 export function getEmailAuditLogs(): EmailDispatchResult[] {
   return [...emailAuditLogs];
 }
+
