@@ -94,8 +94,6 @@ export async function orderBitrefillGiftCard(
         Accept: "application/json",
       };
 
-      const packageId = `${bitrefillProductId}<&>${params.amountInDollars}`;
-
       // 1. Create Invoice with balance auto-pay
       const invoiceResponse = await axios.post(
         `${BITREFILL_API_URL}/invoices`,
@@ -103,7 +101,6 @@ export async function orderBitrefillGiftCard(
           products: [
             {
               product_id: bitrefillProductId,
-              package_id: packageId,
               value: params.amountInDollars,
               quantity: 1,
             },
@@ -206,3 +203,4 @@ export async function orderBitrefillGiftCard(
     },
   };
 }
+
